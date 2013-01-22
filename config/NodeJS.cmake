@@ -1,4 +1,5 @@
 set(DOWNLOAD_DIR ${EXTERNALS_DIR}/nodejs)
+set(NODE_ROOT_DIR ${PROJECT_SOURCE_DIR}/node CACHE INTERNAL "")
 
 if (DOWNLOAD_EXTERNALS)
 
@@ -10,15 +11,13 @@ if (DOWNLOAD_EXTERNALS)
     SOURCE_DIR ${DOWNLOAD_DIR}/nodejs
     BINARY_DIR ${DOWNLOAD_DIR}/nodejs
     UPDATE_COMMAND ""
-    CONFIGURE_COMMAND ./configure
+    CONFIGURE_COMMAND ./configure --prefix=${NODE_ROOT_DIR}
     BUILD_COMMAND make
-    INSTALL_COMMAND "" # skip install
+    INSTALL_COMMAND make install
   )
 
 endif ()
 
-
-set(NODE_ROOT_DIR ${DOWNLOAD_DIR}/nodejs)
 set(NODE_INCLUDE_DIRS
     ${NODE_ROOT_DIR}/src
     ${NODE_ROOT_DIR}/deps/v8/include
