@@ -13,8 +13,10 @@ set(ENABLE_NODEJS ON CACHE BOOL "Enable test suite. (ON|OFF)")
 set(ENABLE_TESTING ON CACHE BOOL "Enable test suite. (ON|OFF)")
 
 if(ENABLE_NODEJS)
-	set(ENABLE_V8 ON)
+  set(ENABLE_V8 ON)
 endif()
+
+set(SUBSTANCE_STORE_DIST_FOLDER ${PROJECT_SOURCE_DIR}/dist)
 
 # Configure external projects
 # ===========================

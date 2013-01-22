@@ -1,5 +1,5 @@
 set(DOWNLOAD_DIR ${EXTERNALS_DIR}/nodejs)
-set(NODE_ROOT_DIR ${PROJECT_SOURCE_DIR}/node CACHE INTERNAL "")
+set(NODE_ROOT_DIR ${SUBSTANCE_STORE_DIST_FOLDER}/node CACHE INTERNAL "")
 
 if (DOWNLOAD_EXTERNALS)
 
@@ -19,9 +19,7 @@ if (DOWNLOAD_EXTERNALS)
 endif ()
 
 set(NODE_INCLUDE_DIRS
-    ${NODE_ROOT_DIR}/src
-    ${NODE_ROOT_DIR}/deps/v8/include
-    ${NODE_ROOT_DIR}/deps/uv/include
+    ${NODE_ROOT_DIR}/include/node
 )
 
 set(V8_INCLUDE_DIRS "${NODE_ROOT_DIR}/deps/v8/include" CACHE INTERNAL "")
