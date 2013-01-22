@@ -31,8 +31,6 @@ else ()
 
 set(JS_INTERPRETER_DIR ${DOWNLOAD_DIR}/swig/Tools/javascript)
 
-message("AAAAAAAAAAAAAAAAAAAAAA ${JS_INTERPRETER_DIR}")
-
 if (ENABLE_JSC)
   include_directories(${JSC_INCLUDE_DIRS})
   add_library(jsc_shell STATIC
