@@ -1,8 +1,8 @@
-(function(){
+(function(ctx){
 
   // Native extension
-  var redis = exports ? require('../dist/redis') : window.redis;
-  var _ = exports ? require('underscore') : window._;
+  var redis = typeof exports !== 'undefined' ? require('../dist/redis') : ctx.redis;
+  var _ = typeof exports !== 'undefined' ? require('underscore') : ctx._;
   
 
   var RedisStore = function(settings) {
@@ -106,6 +106,12 @@
 
       for (var idx = 0; idx < docIds.length; ++idx) {
         var doc = self.documents.getJSON(docIds[idx]);
+
+        doc.refs = {
+          "master": self.getRef(docIds[idx], "master"),
+          "tail": self.getRef(docIds[idx], "tail")
+        };
+
         docs.push(doc);
       }
 
@@ -275,12 +281,9 @@
     // Store = exports;
     // exports.Store = Store;
     exports.RedisStore = RedisStore;
-    exports.redisstore = new RedisStore();
+    // exports.redisstore = new RedisStore();
   } else {
-    window.RedisStore = RedisStore; // -> window.Substance.RedisStore
-    window.redisstore = new RedisStore();
+    ctx.RedisStore = RedisStore; // -> window.Substance.RedisStore
+    // window.redisstore = new RedisStore();
   }
-
-})();
-
-
+})(this);
