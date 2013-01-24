@@ -107,8 +107,10 @@
         doc.refs = {
           "master": self.getRef(docIds[idx], "master"),
           "tail": self.getRef(docIds[idx], "tail"),
-          "synced": self.getRef(docIds[idx], "synced")
         };
+
+        var syncedSha = self.getRef(docIds[idx], "synced");
+        if (syncedSha) doc.refs["synced"] = syncedSha;
 
         docs.push(doc);
       }
@@ -195,7 +197,6 @@
     this.setRef = function(id, ref, sha, cb) {
       self.redis.setString(id + ":refs:" + ref, sha);
       if (cb) cb(null);
-      console.log('set ref', ref, ' to ', sha);
     }
 
     this.getRef = function(id, ref, cb) {
