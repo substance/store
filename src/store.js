@@ -109,9 +109,6 @@
           "tail": self.getRef(docIds[idx], "tail"),
         };
 
-        // var remoteSha = self.getRef(docIds[idx], "tail-remote");
-        // if (remoteSha) doc.refs["tail-remote"] = syncedSha;
-
         docs.push(doc);
       }
 
@@ -267,13 +264,12 @@
      */
     this.get = function(id, cb) {
 
-      if(!self.exists(id) && typeof cb !== "undefined") {
-        if(arguments.length === 2) {
-          cb({err: -1, msg: "Document does not exist."}, undefined);
-        } else {
-          throw "Document does not exist."
-        }
+      if(!self.exists(id)) {
+        if (cb) cb({error: "Document does not exist."});
+        return null;
       }
+
+      console.log('meeh');
 
       var doc = self.documents.getJSON(id);
       doc.commits = {};
@@ -284,9 +280,6 @@
         "master": self.getRef(id, "master"),
         "tail": lastSha,
       };
-
-      // var syncedSha = self.getRef(id, "tail-synced");
-      // if (syncedSha) doc.refs["tail-synced"] = syncedSha;
 
       if (lastSha) {
         var commits = self.commits(id, lastSha);
