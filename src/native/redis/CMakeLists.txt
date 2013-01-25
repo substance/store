@@ -13,11 +13,14 @@ add_custom_command(
 
 set_property(SOURCE ${CMAKE_CURRENT_BINARY_DIR}/redis_access_wrap.cxx PROPERTY GENERATED ON)
 
+set(REDIS_DOCSTORE_HEADERS
+  "${CMAKE_CURRENT_SOURCE_DIR}/redis_error.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/redis_access.hpp"
+)
+
 set(REDIS_DOCSTORE_SOURCES
-  redis_error.hpp
-  redis_access.hpp
-  redis_error.cpp
-  hiredis_access_impl.cxx
+  "${CMAKE_CURRENT_SOURCE_DIR}/redis_error.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/hiredis_access_impl.cxx"
 )
 
 include_directories(
@@ -35,6 +38,7 @@ link_directories(
 
 add_library(
   ${TARGET} SHARED
+  ${REDIS_DOCSTORE_HEADERS}
   ${REDIS_DOCSTORE_SOURCES}
   ${CMAKE_CURRENT_BINARY_DIR}/redis_access_wrap.cxx
 )
@@ -49,48 +53,3 @@ set_target_properties(${TARGET} PROPERTIES
 )
 
 set (redisdocstore_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${jsobjects_INCLUDE_DIRS} ${BOOST_INCLUDE_DIRS} CACHE INTERNAL "" FORCE)
-
-# Node.js extension
-set(TARGET redis.node)
-
-set(REDIS_NODE_WRAPPER ${CMAKE_CURRENT_BINARY_DIR}/redis_node.cxx)
-
-add_custom_command(
-  OUTPUT ${REDIS_NODE_WRAPPER}
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/redis_node.i
-          ${CMAKE_CURRENT_SOURCE_DIR}/redis_access.hpp
-  COMMAND ${SWIG_COMMAND} -c++ -javascript -v8 -no-moduleobject
-          -I${jsobjects_SWIG_INCLUDE_DIRS}
-          -o ${REDIS_NODE_WRAPPER}
-          ${CMAKE_CURRENT_SOURCE_DIR}/redis_node.i
-  COMMENT "Creating node extension for redis_access.hpp"
-)
-
-message("AAAAAAAAAAAAAA  ${NODE_INCLUDE_DIRS}")
-
-include_directories(
-  ${NODE_INCLUDE_DIRS}
-)
-
-set_source_files_properties(${REDIS_NODE_WRAPPER} PROPERTIES GENERATED 1)
-
-add_library(
-  ${TARGET} MODULE
-  ${REDIS_DOCSTORE_SOURCES}
-  ${REDIS_NODE_WRAPPER}
-)
-
-add_custom_command(TARGET ${TARGET}
-  POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/redis.node ${SUBSTANCE_STORE_DIST_FOLDER}/redis.node
-)
-
-target_link_libraries(${TARGET}
-  ${HIREDIS_LIBS}
-)
-
-set_target_properties(${TARGET} PROPERTIES
-  PREFIX ""
-  OUTPUT_NAME "redis"
-  SUFFIX ".node"
-)
