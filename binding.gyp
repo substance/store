@@ -1,9 +1,28 @@
 {
+  "variables": {
+    'externals': '/tmp/redis_node/externals',
+    'swig_exe': '<(externals)/swig-v8/preinst-swig',
+    'node_wrapper': 'build/generated/src/native/redis/node/redis_node.cxx',
+    'jsobjects_swig': '<(externals)/jsobjects/swig'
+  },
   "targets": [
     {
       "target_name": "redis",
-      "dependencies": [
-          "./nodewrapper.gyp:redis_node_wrapper"
+      'actions': [
+        {
+          'action_name': 'swigjs',
+          'inputs': [
+            'src/native/redis/redis_node.i',
+            'src/native/redis/redis_access.hpp',
+            'src/native/redis/redis_error.hpp'
+          ],
+          'outputs': [
+            '<@(node_wrapper)'
+          ],
+          'action': ['<@(swig_exe)', '-c++', '-javascript', '-v8', '-no-moduleobject', 
+                     '-I<@(jsobjects_swig)', '-o', '<@(node_wrapper)',
+                     'src/native/redis/redis_node.i']
+        }
       ],
       "sources": [
           "src/native/redis/redis_error.cpp",
@@ -12,9 +31,9 @@
       ],
       "include_dirs": [
           "src/native/redis",
-          "build/ext/jsobjects/jsobjects/include",
-          "build/ext/hiredis/hiredis",
-          "build/ext/boost"
+          "<(externals)/jsobjects/include",
+          "<(externals)/hiredis",
+          "/usr/include/boost"
       ],
       "conditions" : [
         [ 'OS == "linux"',
@@ -28,8 +47,8 @@
                 "-ljsobjects_v8"
               ],
               "ldflags": [
-                "-L/projects/substance/store/build/ext/hiredis/hiredis",
-                "-L/projects/substance/store/build/ext/jsobjects/bin/src/v8"
+                "-L<(externals)/hiredis",
+                "-L<(externals)/jsobjects/build/src/v8"
               ]
             }
           }
