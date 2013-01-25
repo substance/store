@@ -144,6 +144,12 @@
      */
 
     this.update = function(id, newCommits, cb) {
+      // No commits supplied. Go ahead
+      if (newCommits.length === 0) {
+        cb(null);
+        return true;
+      }
+
       var commitsKey = id + ":commits";
       var commits = self.redis.asList(commitsKey);
 
