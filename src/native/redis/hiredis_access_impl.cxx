@@ -182,7 +182,7 @@ ReplyPtr HiRedisAccess::wrapReply(redisReply *ptr) {
 
 void HiRedisAccess::createCommands() {
   char buf[BUFFER_LEN];
-  int len;
+  int len = 0;
   for(size_t idx = 0; idx < COMMANDS_MAX; ++idx) {
     switch (idx) {
       case EXISTS:
@@ -218,6 +218,8 @@ void HiRedisAccess::createCommands() {
       case DISCONNECT:
         len = snprintf(buf, BUFFER_LEN, "QUIT");
         break;
+      default:
+        throw "Illegal state.";
     }
     char *str = new char[len+1];
     strncpy(str, buf, len+1);
@@ -286,7 +288,7 @@ jsobjects::JSArrayPtr HiRedisList::asArray() {
 
 void HiRedisList::createCommands() {
   char buf[BUFFER_LEN];
-  int len;
+  int len = 0;
   for(size_t idx = 0; idx < COMMANDS_MAX; ++idx) {
     switch (idx) {
       case LENGTH:
@@ -304,6 +306,8 @@ void HiRedisList::createCommands() {
       case DELETE:
         len = snprintf(buf, BUFFER_LEN, "LREM %s 0 %%s", key.c_str());
         break;
+      default:
+        throw "Illegal state.";
     }
     char *str = new char[len+1];
     strncpy(str, buf, len+1);
@@ -372,7 +376,7 @@ void HiRedisHash::remove(const std::string& key)
 
 void HiRedisHash::createCommands() {
   char buf[BUFFER_LEN];
-  int len;
+  int len = 0;
   for(size_t idx = 0; idx < COMMANDS_MAX; ++idx) {
     switch (idx) {
       case CONTAINS:
@@ -393,6 +397,8 @@ void HiRedisHash::createCommands() {
       case REMOVE:
         len = snprintf(buf, BUFFER_LEN, "HDEL %s %%s", key.c_str());
         break;
+      default:
+        throw "Illegal state.";
     }
     char *str = new char[len+1];
     strncpy(str, buf, len+1);
