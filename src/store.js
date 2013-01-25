@@ -109,8 +109,8 @@
           "tail": self.getRef(docIds[idx], "tail"),
         };
 
-        var syncedSha = self.getRef(docIds[idx], "synced");
-        if (syncedSha) doc.refs["synced"] = syncedSha;
+        // var remoteSha = self.getRef(docIds[idx], "tail-remote");
+        // if (remoteSha) doc.refs["tail-remote"] = syncedSha;
 
         docs.push(doc);
       }
@@ -279,8 +279,8 @@
         "tail": lastSha,
       };
 
-      var syncedSha = self.getRef(id, "synced");
-      if (syncedSha) doc.refs["synced"] = syncedSha;
+      // var syncedSha = self.getRef(id, "tail-synced");
+      // if (syncedSha) doc.refs["tail-synced"] = syncedSha;
 
       if (lastSha) {
         var commits = self.commits(id, lastSha);
