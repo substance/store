@@ -1,0 +1,22 @@
+{
+  "name" : "redis",
+  "version" : "v0.1.0",
+  "scripts" : {
+    "preinstall" : "node-gyp configure build",
+    "preuninstall" : "rm -rf build/*"
+  },
+  "description" : "Provides access to a redisdb.",
+  "homepage" : "https://github.com/substance/store",
+  "author" : {
+    "name" : "Oliver Buchtala",
+    "email" : "oliver.buchtala@googlemail.com"
+  },
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/substance/store.git"
+  },
+  "main": "index",
+  "directories": {
+      "lib": "./lib"
+  }
+}
