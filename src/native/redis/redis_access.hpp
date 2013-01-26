@@ -28,6 +28,8 @@ public:
 
   static RedisAccessPtr Create(jsobjects::JSContextPtr jscontext);
 
+  virtual ~RedisAccess () {}
+
   virtual void setHost(const char* host) = 0;
 
   virtual void setPort(int port) = 0;
@@ -69,6 +71,8 @@ class RedisList {
 
 public:
 
+  virtual ~RedisList () {}
+
   virtual unsigned int size() = 0;
 
   virtual void addAsString(const std::string &val) = 0;
@@ -87,6 +91,8 @@ public:
 class RedisHash {
 
 public:
+
+  virtual ~RedisHash () {}
 
   virtual bool contains(const std::string& key) = 0;
 
