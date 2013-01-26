@@ -16,10 +16,9 @@ if (DOWNLOAD_EXTERNALS)
     INSTALL_COMMAND "" # skip install
   )
 
-else ()
-
-  set(HIREDIS_INCLUDE_DIRS ${EXTERNALS_DIR}/hiredis/hiredis)
-  set(HIREDIS_LIB_DIRS "${EXTERNALS_DIR}/hiredis/hiredis")
-  set(HIREDIS_LIBS libhiredis.a)
-
 endif ()
+
+set(HIREDIS_INCLUDE_DIRS ${EXTERNALS_DIR}/hiredis/hiredis)
+set(HIREDIS_LIB_DIRS "${EXTERNALS_DIR}/hiredis/hiredis")
+set(HIREDIS_LIBS libhiredis.a)
+

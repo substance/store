@@ -6,11 +6,14 @@ if(Boost-NOTFOUND)
 endif()
 
 if(NOT EXISTS ${SWIG_COMMAND})
-  message("###### NOTE: you can avoid downloading and building the swig-v8 project by providing a CMake variable 'SWIG_COMMAND'")
-  include(SwigJS)
+  FIND_PROGRAM(SWIG_COMMAND NAMES preinst-swig)
+  if(NOT EXISTS ${SWIG_COMMAND})
+    message("###### NOTE: you can avoid downloading and building the swig-v8 project by providing a CMake variable 'SWIG_COMMAND'")
+    include(SwigJS)
+  endif()
 endif()
 
-if(ENABLE_TESTING)
+if(ENABLE_TESTS)
   include(GTest-1.6)
 endif()
 
