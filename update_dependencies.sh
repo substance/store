@@ -2,18 +2,24 @@
 
 # helper scripts to install all externals for the building the node.js extension
 
-if [ ! -d /tmp/redis_node ]; then
-  mkdir /tmp/redis_node
+EXTERNALS=/tmp/redis_node_externals
+
+if [ ! -d $EXTERNALS ]; then
+  mkdir $EXTERNALS
 fi
 
-cd /tmp/redis_node
+cd $EXTERNALS
 
-# check if the externals folder exists
-if [ ! -d externals ]; then
-  mkdir externals
+######################
+# boost
+boost_modules="config detail exception smart_ptr algorithm iterator mpl range type_traits preprocessor utility concept function bind format optional"
+
+if [ ! -d boost ]; then
+  svn co --depth files http://svn.boost.org/svn/boost/tags/release/Boost_1_50_0/boost
+  cd boost
+  svn update $boost_modules
+  cd ..
 fi
-
-cd externals
 
 ######################
 # swig-v8
@@ -52,11 +58,11 @@ if [ ! -d build ]; then
   mkdir build
 fi
 
-if [ ! -f build/CMakeCache.txt ]; then
+#if [ ! -f build/CMakeCache.txt ]; then
   cd build
-  cmake -DENABLE_V8=ON ..
+  cmake -DENABLE_V8=OFF -DEXTERNALS_DIR="$EXTERNALS" -DCMAKE_PREFIX_PATH="$EXTERNALS" ..
   cd ..
-fi
+#fi
 
 git pull origin master
 cd build
@@ -74,3 +80,4 @@ fi
 cd hiredis
 make static
 cd ..
+
