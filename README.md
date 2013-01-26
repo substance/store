@@ -13,3 +13,9 @@ Substance Document Storage Layer
 
     $ npm install https://github.com/substance/store.git
     
+
+# Usage
+
+var redis = require('redis');
+
+var store = require('store');
