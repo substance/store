@@ -1,7 +1,7 @@
 {
-    "name": "redis",
-    "description": "Provides access to a redisdb.",
-    "keywords": ["redis", "redisdb"],
+    "name": "substance-store",
+    "description": "Provides access to a Substance Document Store.",
+    "keywords": ["redis", "redisdb", "substance"],
     "author": "Oliver Buchtala <oliver.buchtala@gmail.com>",
     "version": "0.1.0",
     "repository": {
