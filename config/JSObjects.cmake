@@ -1,7 +1,7 @@
 set(DOWNLOAD_DIR ${EXTERNALS_DIR}/jsobjects)
-set (JSOBJECTS_INCLUDED ON CACHE INTERNAL "" FORCE)
 
 if (NOT JSOBJECTS_INCLUDED AND DOWNLOAD_EXTERNALS)
+  set (JSOBJECTS_INCLUDED ON CACHE INTERNAL "" FORCE)
 
   ExternalProject_Add(jsobjects
     GIT_REPOSITORY git://github.com/oliver----/jsobjects.git
