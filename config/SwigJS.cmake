@@ -1,4 +1,5 @@
 set(DOWNLOAD_DIR ${EXTERNALS_DIR}/swig)
+set (SWIGJS_INCLUDED ON CACHE INTERNAL "" FORCE)
 
 if(APPLE)
   # HACK: For Mountain Lion there is a pre-configured build to avoid dependency to automake chain
@@ -9,8 +10,7 @@ else()
   set(UPDATE_COMMAND /bin/sh autogen.sh)
 endif()
 
-
-if (NOT EXISTS ${DOWNLOAD_DIR} AND DOWNLOAD_EXTERNALS)
+if (NOT SWIGJS_INCLUDED AND DOWNLOAD_EXTERNALS)
 
   message("###### NOTE: you can avoid downloading and building the swig-v8 project by providing a CMake variable 'SWIG_COMMAND'")
 
