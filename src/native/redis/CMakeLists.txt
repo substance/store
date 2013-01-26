@@ -44,8 +44,12 @@ add_library(
 )
 
 target_link_libraries(${TARGET}
-  ${HIREDIS_LIBS}
   ${JS_LIBRARIES}
+)
+
+target_link_libraries(${TARGET}
+  LINK_PRIVATE
+  ${HIREDIS_LIBS}
 )
 
 set_target_properties(${TARGET} PROPERTIES
