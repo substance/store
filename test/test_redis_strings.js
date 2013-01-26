@@ -1,4 +1,4 @@
-redis = require('redis')
+redis = require('../lib/redis')
 
 var db = redis.RedisAccess.Create(0);
 db.connect();
@@ -20,7 +20,7 @@ var testData = {
   undefined_: {
     key: "undefined",
     str: undefined
-  }  
+  }
 };
 
 var data = testData.ascii;
