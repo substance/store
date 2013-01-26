@@ -1,15 +1,16 @@
+set (DOWNLOAD_DIR ${DOWNLOAD_DIR}/hiredis)
 
-if (DOWNLOAD_EXTERNALS)
+if (NOT EXISTS ${DOWNLOAD_DIR} AND DOWNLOAD_EXTERNALS)
 
   # Configure hiredis
   # -----------------
   ExternalProject_Add(hiredis
     GIT_REPOSITORY "https://github.com/redis/hiredis.git"
-    DOWNLOAD_DIR ${EXTERNALS_DIR}/hiredis
-    SOURCE_DIR ${EXTERNALS_DIR}/hiredis/hiredis
-    BINARY_DIR ${EXTERNALS_DIR}/hiredis/hiredis
-    STAMP_DIR ${EXTERNALS_DIR}/hiredis/stamp
-    TMP_DIR ${EXTERNALS_DIR}/hiredis/tmp
+    DOWNLOAD_DIR ${DOWNLOAD_DIR}
+    SOURCE_DIR ${DOWNLOAD_DIR}/hiredis
+    BINARY_DIR ${DOWNLOAD_DIR}/hiredis
+    STAMP_DIR ${DOWNLOAD_DIR}/stamp
+    TMP_DIR ${DOWNLOAD_DIR}/tmp
     UPDATE_COMMAND "" # don't update, i.e., always use the same version
     CONFIGURE_COMMAND "" # skip configure
     BUILD_COMMAND make static
@@ -18,7 +19,7 @@ if (DOWNLOAD_EXTERNALS)
 
 endif ()
 
-set(HIREDIS_INCLUDE_DIRS ${EXTERNALS_DIR}/hiredis/hiredis)
-set(HIREDIS_LIB_DIRS "${EXTERNALS_DIR}/hiredis/hiredis")
+set(HIREDIS_INCLUDE_DIRS ${DOWNLOAD_DIR}/hiredis)
+set(HIREDIS_LIB_DIRS "${DOWNLOAD_DIR}/hiredis")
 set(HIREDIS_LIBS libhiredis.a)
 

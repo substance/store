@@ -10,7 +10,7 @@ else()
 endif()
 
 
-if (DOWNLOAD_EXTERNALS)
+if (NOT EXISTS ${DOWNLOAD_DIR} AND DOWNLOAD_EXTERNALS)
 
   message("###### NOTE: you can avoid downloading and building the swig-v8 project by providing a CMake variable 'SWIG_COMMAND'")
 

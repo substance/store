@@ -1,20 +1,21 @@
+set(DOWNLOAD_DIR ${EXTERNALS_DIR}/reidsdb)
 
-if (DOWNLOAD_EXTERNALS)
+if (NOT EXISTS ${DOWNLOAD_DIR} AND DOWNLOAD_EXTERNALS)
 
   # Configure hiredis
   # -----------------
   ExternalProject_Add(redisdb
     GIT_REPOSITORY "https://github.com/antirez/redis.git"
     GIT_TAG "2.6.6"
-    DOWNLOAD_DIR ${EXTERNALS_DIR}/redisdb
-    SOURCE_DIR ${EXTERNALS_DIR}/redisdb/redis
-    BINARY_DIR ${EXTERNALS_DIR}/redisdb/redis
-    STAMP_DIR ${EXTERNALS_DIR}/redisdb/stamp
-    TMP_DIR ${EXTERNALS_DIR}/redisdb/tmp
+    DOWNLOAD_DIR ${DOWNLOAD_DIR}
+    SOURCE_DIR ${DOWNLOAD_DIR}/redis
+    BINARY_DIR ${DOWNLOAD_DIR}/redis
+    STAMP_DIR ${DOWNLOAD_DIR}/stamp
+    TMP_DIR ${DOWNLOAD_DIR}/tmp
     UPDATE_COMMAND "" # don't update, i.e., always use the same version
     CONFIGURE_COMMAND "" # skip configure
     BUILD_COMMAND make
-    INSTALL_COMMAND make PREFIX=${EXTERNALS_DIR}/redisdb install
+    INSTALL_COMMAND make PREFIX=${DOWNLOAD_DIR} install
   )
 
 else ()

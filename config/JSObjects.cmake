@@ -1,6 +1,6 @@
 set(DOWNLOAD_DIR ${EXTERNALS_DIR}/jsobjects)
 
-if (DOWNLOAD_EXTERNALS)
+if (NOT EXISTS ${DOWNLOAD_DIR} AND DOWNLOAD_EXTERNALS)
 
   ExternalProject_Add(jsobjects
     GIT_REPOSITORY git://github.com/oliver----/jsobjects.git
