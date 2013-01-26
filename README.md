@@ -1,4 +1,4 @@
-store
+Substance Store
 =====
 
 Substance Document Storage Layer
