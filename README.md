@@ -7,7 +7,8 @@ Substance Document Storage Layer
 
 - Install Node.js 0.8.x
 - PCRE (sudo port install pcre)
-- Automake (sudo port install automake)
+- Automake (really?) (sudo port install automake)
+- Autoconf (sudo port install automake)
 
 # Install (Mac OSX)
 
@@ -16,6 +17,6 @@ Substance Document Storage Layer
 
 # Usage
 
-var redis = require('redis');
+    var redis = require('redis');
 
-var store = require('store');
+    var store = require('store');
