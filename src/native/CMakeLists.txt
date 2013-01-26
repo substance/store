@@ -1,5 +1,5 @@
 SET(JS_INCLUDE_DIRS ${JSC_INCLUDE_DIR})
-SET(JS_LIBRARY_DIRS ${jsobjects_LIBRARY_DIRS})
-SET(JS_LIBRARIES ${JSC} jsobjects_jsc)
-
+# note currently nothing needed here...
+SET(JS_LIBRARY_DIRS "")
+SET(JS_LIBRARIES ${JSC})
 add_subdirectory(redis)

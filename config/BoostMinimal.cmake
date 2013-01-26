@@ -36,4 +36,4 @@ if (DOWNLOAD_EXTERNALS)
 
 endif()
 
-set(BOOST_INCLUDE_DIRS ${EXTERNALS_DIR}/boost)
+set(Boost_INCLUDE_DIRS ${EXTERNALS_DIR}/boost)

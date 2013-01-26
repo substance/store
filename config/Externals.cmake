@@ -1,14 +1,13 @@
 include(ExternalProject)
 
 FIND_PACKAGE(Boost)
-if(Boost-NOTFOUND)
+if(NOT Boost_FOUND)
   include(BoostMinimal)
 endif()
 
 if(NOT EXISTS ${SWIG_COMMAND})
   FIND_PROGRAM(SWIG_COMMAND NAMES preinst-swig)
   if(NOT EXISTS ${SWIG_COMMAND})
-    message("###### NOTE: you can avoid downloading and building the swig-v8 project by providing a CMake variable 'SWIG_COMMAND'")
     include(SwigJS)
   endif()
 endif()

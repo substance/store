@@ -12,6 +12,8 @@ endif()
 
 if (DOWNLOAD_EXTERNALS)
 
+  message("###### NOTE: you can avoid downloading and building the swig-v8 project by providing a CMake variable 'SWIG_COMMAND'")
+
   ExternalProject_Add(swig_js
     LIST_SEPARATOR ":"
     GIT_REPOSITORY https://github.com/oliver----/swig-v8.git

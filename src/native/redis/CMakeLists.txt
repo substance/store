@@ -25,7 +25,7 @@ set(REDIS_DOCSTORE_SOURCES
 
 include_directories(
   ${JS_INCLUDE_DIRS}
-  ${BOOST_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
   ${jsobjects_INCLUDE_DIRS}
   ${HIREDIS_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR}
@@ -53,3 +53,5 @@ set_target_properties(${TARGET} PROPERTIES
 )
 
 set (redisdocstore_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${jsobjects_INCLUDE_DIRS} ${BOOST_INCLUDE_DIRS} CACHE INTERNAL "" FORCE)
+
+export(TARGETS ${TARGET} FILE ${PROJECT_BINARY_DIR}/RedisDocStore.cmake)

@@ -1,11 +1,5 @@
 set(DOWNLOAD_DIR ${EXTERNALS_DIR}/jsobjects)
 
-set(CMAKEARG_ENABLEV8 "")
-
-if(ENABLE_V8)
-  set(CMAKEARG_ENABLEV8 "-DENABLE_V8=ON")
-endif()
-
 if (DOWNLOAD_EXTERNALS)
 
   ExternalProject_Add(jsobjects
@@ -17,7 +11,7 @@ if (DOWNLOAD_EXTERNALS)
     BINARY_DIR ${DOWNLOAD_DIR}/bin
     UPDATE_COMMAND git pull origin master
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -DIMPORT=ON
-        -DENABLE_JSC=ON -DENABLE_CPP=OFF ${CMAKEARG_ENABLEV8} -DENABLE_TESTS=OFF
+        -DENABLE_JSC=OFF -DENABLE_CPP=OFF -DENABLE_TESTS=OFF
         -DEXTERNALS_DIR=${EXTERNALS_DIR}
         -DLIBRARY_TYPE=STATIC
         ${DOWNLOAD_DIR}/jsobjects
@@ -28,5 +22,4 @@ if (DOWNLOAD_EXTERNALS)
 endif ()
 
 set(jsobjects_INCLUDE_DIRS ${DOWNLOAD_DIR}/jsobjects/include)
-set(jsobjects_LIBRARY_DIRS ${DOWNLOAD_DIR}/bin/src/jsc)
 set(jsobjects_SWIG_INCLUDE_DIRS ${DOWNLOAD_DIR}/jsobjects/swig)
