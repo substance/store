@@ -14,7 +14,7 @@
     "scripts": {
       "preinstall" : "./update_dependencies.sh && node-gyp configure build"
     },
-    "main": "./lib/redis.js",
+    "main": "./src/store.js",
     "directories": {
         "lib": "./lib"
     }
