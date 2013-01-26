@@ -43,6 +43,8 @@ add_library(
   ${CMAKE_CURRENT_BINARY_DIR}/redis_access_wrap.cxx
 )
 
+add_dependencies(${TARGET} hiredis)
+
 target_link_libraries(${TARGET}
   ${JS_LIBRARIES}
 )
