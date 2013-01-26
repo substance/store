@@ -17,6 +17,4 @@ Substance Document Storage Layer
 
 # Usage
 
-    var redis = require('redis');
-
-    var store = require('store');
+    var store = require('substance-store');
