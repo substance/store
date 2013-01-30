@@ -14,10 +14,6 @@ class RedisError;
 #define _THROW(a)
 #endif
 
-//#ifndef _THROW
-//#define _THROW(a)
-//#endif
-
 typedef RedisAccess* RedisAccessPtr;
 typedef RedisList* RedisListPtr;
 typedef RedisHash* RedisHashPtr;

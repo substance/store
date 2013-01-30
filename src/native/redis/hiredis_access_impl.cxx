@@ -1,9 +1,3 @@
-/*
- * TODOS (26.11.2012):
- *  - re-activate the test suite
- *  - add javascript tests (CLI)
- */
-
 #include <hiredis.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -24,17 +18,19 @@ using boost::str;
 #define BUFFER_LEN 1024
 
 HiRedisAccess::HiRedisAccess(jsobjects::JSContextPtr jscontext)
-  : jscontext(jscontext),hostUrl("127.0.0.1"), port(6379), scope("")
+  : jscontext(jscontext), redis(0), hostUrl("127.0.0.1"), port(6379), scope("")
 {
   createCommands();
 }
 
 HiRedisAccess::~HiRedisAccess() {
+
   if(redis != 0) {
     redisFree(redis);
     redis->flags = 0;
     redis = 0;
   }
+
   for(size_t idx = 0; idx < COMMANDS_MAX; ++idx) {
     if(commands[idx]) {
       delete[] commands[idx];
@@ -56,8 +52,10 @@ void HiRedisAccess::setScope(const char* scope) {
 }
 
 void HiRedisAccess::connect() {
+  if (redis != 0) {
+    redisFree(redis);
+  }
   redis = redisConnect(hostUrl.c_str(), port);
-  //redis = redisConnectUnix("/tmp/substance.sock");
   if (redis->err) {
     throw RedisError("Connection error: %s\n", redis->errstr);
   }
