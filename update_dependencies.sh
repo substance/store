@@ -18,11 +18,11 @@ if [ ! -d boost ]; then
   svn co --depth files http://svn.boost.org/svn/boost/tags/release/Boost_1_50_0/boost
   cd boost
   svn update $boost_modules
-  cd ..
 fi
 
 ######################
 # swig-v8
+cd $EXTERNALS
 
 if [ ! -d swig-v8 ]; then
   git clone https://github.com/oliver----/swig-v8.git
@@ -43,10 +43,9 @@ fi
 git pull origin devel
 make
 
-cd ..
-
 ######################
 # jsobjects
+cd $EXTERNALS
 
 if [ ! -d jsobjects ]; then
   git clone https://github.com/oliver----/jsobjects.git
@@ -67,17 +66,14 @@ fi
 git pull origin master
 cd build
 make
-cd ..
-
-cd ..
 
 ######################
 # hiredis
+cd $EXTERNALS
+
 if [ ! -d hiredis ]; then
   git clone https://github.com/redis/hiredis.git
 fi
 
 cd hiredis
 make static
-cd ..
-
