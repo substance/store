@@ -1,7 +1,7 @@
 (function(ctx){
 
   // Native extension
-  var redis = typeof exports !== 'undefined' ? require('substance-store/lib/redis') : ctx.redis;
+  var redis = typeof exports !== 'undefined' ? require('../dist/redis') : ctx.redis;
   var _ = typeof exports !== 'undefined' ? require('underscore') : ctx._;
   
 
@@ -92,6 +92,15 @@
       if (cb) cb(null, doc);
     };
 
+    /**
+     * Get document info (no contents)
+     */
+
+    this.getInfo = function(id, cb) {
+      var doc = self.documents.getJSON(id);
+      if (cb) cb(null, doc);
+      return doc;
+    };
 
     /**
      * List all documents complete with metadata
@@ -327,8 +336,6 @@
         if (cb) cb({error: "Document does not exist."});
         return null;
       }
-
-      console.log('meeh');
 
       var doc = self.documents.getJSON(id);
       doc.commits = {};
