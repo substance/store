@@ -1,7 +1,7 @@
 (function(ctx){
 
   // Native extension
-  var redis = typeof exports !== 'undefined' ? require('redis') : ctx.redis;
+  var redis = typeof exports !== 'undefined' ? require('substance-store/lib/redis') : ctx.redis;
   var _ = typeof exports !== 'undefined' ? require('underscore') : ctx._;
 
 
@@ -109,7 +109,6 @@
       return doc;
     }
 
-
     /**
      * List all documents complete with metadata
      */
@@ -132,7 +131,7 @@
     };
 
     /**
-     *  Deletes a document
+     *  Permanently deletes a document
      *  @param cb callback
      */
 
@@ -141,7 +140,7 @@
       self.redis.removeWithPrefix(id);
       if (cb) cb(null);
       return true;
-    }
+    };
 
     /**
      *  Stores a sequence of commits for a given document id.
@@ -278,8 +277,6 @@
         if (cb) cb({error: "Document does not exist."});
         return null;
       }
-
-      console.log('meeh');
 
       var doc = self.documents.getJSON(id);
       doc.commits = {};

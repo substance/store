@@ -15,6 +15,11 @@ using namespace jsobjects;
 
 %include <jsobjects.i>
 
+/* important: declare all methods which create new instances here */
+%newobject RedisAccess::Create;
+%newobject RedisAccess::asList;
+%newobject RedisAccess::asHash;
+
 %include "redis_error.hpp"
 %include "redis_access.hpp"
 

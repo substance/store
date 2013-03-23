@@ -23,6 +23,8 @@ class HiRedisList: public RedisList {
 public:
   HiRedisList(HiRedisAccess &redis, const std::string& key);
 
+  virtual ~HiRedisList() {}
+
   virtual unsigned int size();
 
   virtual void addAsString(const std::string &val);
@@ -64,6 +66,8 @@ class HiRedisHash: public RedisHash {
 
 public:
   HiRedisHash(HiRedisAccess &redis, const std::string& key);
+
+  virtual ~HiRedisHash() {}
 
   virtual bool contains(const std::string& key);
 
