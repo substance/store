@@ -3,7 +3,7 @@
   // Native extension
   var redis = typeof exports !== 'undefined' ? require('redis') : ctx.redis;
   var _ = typeof exports !== 'undefined' ? require('underscore') : ctx._;
-  
+
 
   var RedisStore = function(settings) {
     // reference to this for use within instance methods
@@ -92,23 +92,33 @@
       if (cb) cb(null, doc);
     };
 
+    /**
+     * Retrieves a document without content only containing meta information.
+     */
+    this.getInfo = function(id, cb) {
+
+      var doc = self.documents.getJSON(id);
+
+      doc.refs = {
+        "master": self.getRef(id, "master"),
+        "tail": self.getRef(id, "tail"),
+      };
+
+      if (cb) cb(null, doc);
+
+      return doc;
+    }
+
 
     /**
      * List all documents complete with metadata
      */
-
     this.list = function (cb) {
       var docIds = self.documents.getKeys();
       var docs = [];
 
       for (var idx = 0; idx < docIds.length; ++idx) {
-        var doc = self.documents.getJSON(docIds[idx]);
-
-        doc.refs = {
-          "master": self.getRef(docIds[idx], "master"),
-          "tail": self.getRef(docIds[idx], "tail"),
-        };
-
+        var doc = self.getInfo(docIds[idx]);
         docs.push(doc);
       }
 
@@ -286,7 +296,7 @@
 
         _.each(commits, function(c) {
           doc.commits[c.sha] = c;
-        });        
+        });
       }
 
       if (lastSha && !doc.commits[lastSha]) {
@@ -299,7 +309,7 @@
     };
 
   };
-  
+
   // Exports
   if (typeof exports !== 'undefined') {
     // Store = exports;
