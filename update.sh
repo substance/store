@@ -23,9 +23,9 @@ function readopts {
     if getopts ":d:e:hbv" opt; then
       case $opt in
         d) EXTERNALS=$OPTARG;;
-        e)  if [ "$OPTARG"=="jsc" ]; then
+        e)  if [ $OPTARG == jsc ]; then
               BUILD_JSC_EXTENSION=1
-            elif [ "$OPTARG"=="v8" ]; then
+            elif [ $OPTARG == v8 ]; then
               BUILD_V8_EXTENSION=1
             fi;;
         b) BUILD=1;;
@@ -42,11 +42,11 @@ function readopts {
 OPTIND=1
 readopts "$@"
 
-if [ $VERBOSE==1 ]; then
+if [ $VERBOSE == 1 ]; then
   echo "Updating store..."
   echo "Storing into directory: $EXTERNALS"
   echo "Building: $BUILD"
-  if [ $BUILD==1 ]; then
+  if [ $BUILD == 1 ]; then
     echo "JSC: $BUILD_JSC_EXTENSION"
     echo "V8: $BUILD_V8_EXTENSION"
   fi
@@ -130,10 +130,10 @@ if [ $BUILD == 1 ]; then
   cd build
   if [ ! -f CMakeCache.txt ]; then
     CMAKE_ARGS="-DEXTERNALS_DIR=$EXTERNALS -DSWIG_COMMAND=$EXTERNALS/swig/preinst-swig -DCMAKE_PREFIX_PATH=$EXTERNALS"
-    if [  $BUILD_V8_EXTENSION==1 ]; then
+    if [  $BUILD_V8_EXTENSION == 1 ]; then
       CMAKE_ARGS="$CMAKE_ARGS -DENABLE_V8=ON"
     fi
-    if [  $BUILD_JSC_EXTENSION==1 ]; then
+    if [  $BUILD_JSC_EXTENSION == 1 ]; then
       CMAKE_ARGS="$CMAKE_ARGS -DENABLE_JSC=ON"
     fi
     cmake  $CMAKE_ARGS ..
