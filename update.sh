@@ -19,7 +19,7 @@ BUILD_V8_EXTENSION=0
 
 function readopts {
   while ((OPTIND<=$#)); do
-    if getopts ":d:e:hb" opt; then
+    if getopts ":d:e:hbv" opt; then
       case $opt in
         d) EXTERNALS=$OPTARG;;
         e)  if [ "$OPTARG"=="jsc" ]; then
@@ -28,6 +28,7 @@ function readopts {
               BUILD_V8_EXTENSION=1
             fi;;
     b) BUILD=1;;
+    b) VERBOSE=1;;
     h) echo "Usage: update.sh [-d <directory>] [-b]" $$ exit;;
         *) ;;
       esac
@@ -40,12 +41,14 @@ function readopts {
 OPTIND=1
 readopts "$@"
 
-echo "Updating store..."
-echo "Storing into directory: $EXTERNALS"
-echo "Building: $BUILD"
-if [ $BUILD==1 ]; then
-  echo "JSC: $BUILD_JSC_EXTENSION"
-  echo "V8: $BUILD_V8_EXTENSION"
+if [ VERBOSE==1 ]; then
+  echo "Updating store..."
+  echo "Storing into directory: $EXTERNALS"
+  echo "Building: $BUILD"
+  if [ $BUILD==1 ]; then
+    echo "JSC: $BUILD_JSC_EXTENSION"
+    echo "V8: $BUILD_V8_EXTENSION"
+  fi
 fi
 
 if [ ! -d $EXTERNALS ]; then
@@ -108,7 +111,9 @@ if [ ! -d hiredis ]; then
 fi
 
 cd hiredis
-make static
+if [ ! -f hiredis/libhiredis.a ]; then
+  make static
+fi
 
 ######################
 # Build the store
@@ -123,7 +128,7 @@ if [ $BUILD == 1 ]; then
     mkdir build
   fi
   cd build
-  #if [ ! -f CMakeCache.txt ]; then
+  if [ ! -f CMakeCache.txt ]; then
     CMAKE_ARGS="-DEXTERNALS_DIR=$EXTERNALS -DSWIG_COMMAND=$EXTERNALS/swig/preinst-swig -DCMAKE_PREFIX_PATH=$EXTERNALS"
     if [  $BUILD_V8_EXTENSION==1 ]; then
       CMAKE_ARGS="$CMAKE_ARGS -DENABLE_V8=ON"
@@ -132,6 +137,6 @@ if [ $BUILD == 1 ]; then
       CMAKE_ARGS="$CMAKE_ARGS -DENABLE_JSC=ON"
     fi
     cmake  $CMAKE_ARGS ..
-  #fi
+  fi
   make
 fi
