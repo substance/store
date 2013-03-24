@@ -15,7 +15,7 @@
       "underscore": "1.4.x"
     },
     "scripts": {
-      "preinstall" : "./update_dependencies.sh && node-gyp configure build"
+      "preinstall" : "./update.sh && node-gyp configure build"
     },
     "main": "./src/store.js",
     "directories": {
