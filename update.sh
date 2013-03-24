@@ -14,23 +14,31 @@ fi
 
 EXTERNALS=/tmp/substance_store
 VERBOSE=0
-BUILD=0
+CMAKE_BUILD=0
 BUILD_JSC_EXTENSION=0
 BUILD_V8_EXTENSION=0
+NODE=0
 
 function readopts {
   while ((OPTIND<=$#)); do
-    if getopts ":d:e:hbv" opt; then
+    if getopts ":d:e:hbvn" opt; then
       case $opt in
-        d) EXTERNALS=$OPTARG;;
+        d)  EXTERNALS=$OPTARG;;
         e)  if [ $OPTARG == jsc ]; then
               BUILD_JSC_EXTENSION=1
             elif [ $OPTARG == v8 ]; then
               BUILD_V8_EXTENSION=1
             fi;;
-        b) BUILD=1;;
-        v) VERBOSE=1;;
-        h) echo "Usage: update.sh [-d <directory>] [-b]" $$ exit;;
+        b)  CMAKE_BUILD=1;;
+        v)  VERBOSE=1;;
+        n)  NODE=1;;
+        h)  echo "Usage: update.sh [-d <directory>] [-n] [-b [-e jsc | v8]] [-h] [-v]"
+            echo "    -n: build store as node module"
+            echo "    -b: build the store using cmake (library)"
+            echo "    -e: build for 'jsc' or 'v8'"
+            echo "    -v: verbose output"
+            echo "    -h: display this help"
+            exit;;
         *) ;;
       esac
     else
@@ -46,7 +54,7 @@ if [ $VERBOSE == 1 ]; then
   echo "Updating store..."
   echo "Storing into directory: $EXTERNALS"
   echo "Building: $BUILD"
-  if [ $BUILD == 1 ]; then
+  if [ $CMAKE_BUILD == 1 ]; then
     echo "JSC: $BUILD_JSC_EXTENSION"
     echo "V8: $BUILD_V8_EXTENSION"
   fi
@@ -118,7 +126,33 @@ fi
 ######################
 # Build the store
 
-if [ $BUILD == 1 ]; then
+if [ $NODE == 1 ]; then
+  WRAPPER_DIR="$PROJECT_DIR/build/generated/src/native/redis/node"
+  NODE_WRAPPER="$WRAPPER_DIR/redis_node.cxx"
+  SWIG_EXE="$EXTERNALS/swig/preinst-swig"
+
+  GENERATE_WRAPPER=0
+
+  if [ ! -f $NODE_WRAPPER ]; then
+    GENERATE_WRAPPER=1
+  elif test $PROJECT_DIR/src/native/redis/redis_node.i -nt $NODE_WRAPPER; then
+    GENERATE_WRAPPER=1
+  elif test $PROJECT_DIR/src/native/redis/redis_error.hpp -nt $NODE_WRAPPER; then
+    GENERATE_WRAPPER=1
+  elif test $PROJECT_DIR/src/native/redis/redis_access.hpp -nt $NODE_WRAPPER; then
+    GENERATE_WRAPPER=1
+  fi
+
+  if [ $GENERATE_WRAPPER == 1 ]; then
+    mkdir -p $WRAPPER_DIR
+    $SWIG_EXE -c++ -javascript -v8 -no-moduleobject -I$EXTERNALS/jsobjects/swig -o $NODE_WRAPPER $PROJECT_DIR/src/native/redis/redis_node.i
+  else
+    echo "Node wrapper already up2date."
+  fi
+fi
+
+
+if [ $CMAKE_BUILD == 1 ]; then
   echo "Building the store..."
   cd $PROJECT_DIR
 
