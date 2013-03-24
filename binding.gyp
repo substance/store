@@ -1,7 +1,7 @@
 {
   "variables": {
     'externals': '/tmp/redis_node_externals',
-    'swig_exe': '<(externals)/swig-v8/preinst-swig',
+    'swig_exe': '<(externals)/swig/preinst-swig',
     'node_wrapper': 'build/generated/src/native/redis/node/redis_node.cxx',
     'jsobjects_swig': '<(externals)/jsobjects/swig'
   },

@@ -47,7 +47,6 @@ if [ $BUILD==1 ]; then
   echo "JSC: $BUILD_JSC_EXTENSION"
   echo "V8: $BUILD_V8_EXTENSION"
 fi
-# helper scripts to install all externals for the building the node.js extension
 
 if [ ! -d $EXTERNALS ]; then
   mkdir $EXTERNALS
@@ -66,14 +65,15 @@ if [ ! -d boost ]; then
 fi
 
 ######################
-# swig-v8
+# swig
+
 cd $EXTERNALS
 
-if [ ! -d swig-v8 ]; then
-  git clone https://github.com/oliver----/swig-v8.git
+if [ ! -d swig ]; then
+  git clone https://github.com/oliver----/swig-v8.git swig
 fi
 
-cd swig-v8
+cd swig
 
 if [ ! -f configure ]; then
   ./autogen.sh
@@ -124,7 +124,7 @@ if [ $BUILD == 1 ]; then
   fi
   cd build
   #if [ ! -f CMakeCache.txt ]; then
-    CMAKE_ARGS="-DEXTERNALS_DIR=$EXTERNALS -DSWIG_COMMAND=$EXTERNALS/swig-v8/preinst-swig -DCMAKE_PREFIX_PATH=$EXTERNALS"
+    CMAKE_ARGS="-DEXTERNALS_DIR=$EXTERNALS -DSWIG_COMMAND=$EXTERNALS/swig/preinst-swig -DCMAKE_PREFIX_PATH=$EXTERNALS"
     if [  $BUILD_V8_EXTENSION==1 ]; then
       CMAKE_ARGS="$CMAKE_ARGS -DENABLE_V8=ON"
     fi
