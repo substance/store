@@ -28,7 +28,7 @@ function readopts {
               BUILD_V8_EXTENSION=1
             fi;;
     b) BUILD=1;;
-    b) VERBOSE=1;;
+    v) VERBOSE=1;;
     h) echo "Usage: update.sh [-d <directory>] [-b]" $$ exit;;
         *) ;;
       esac
