@@ -11,6 +11,9 @@
     "engines": {
         "node": ">=0.6.0"
     },
+    "dependencies": {
+      "underscore": "1.4.x"
+    },
     "scripts": {
       "preinstall" : "./update_dependencies.sh && node-gyp configure build"
     },
