@@ -28,9 +28,9 @@ function readopts {
             elif [ "$OPTARG"=="v8" ]; then
               BUILD_V8_EXTENSION=1
             fi;;
-    b) BUILD=1;;
-    v) VERBOSE=1;;
-    h) echo "Usage: update.sh [-d <directory>] [-b]" $$ exit;;
+        b) BUILD=1;;
+        v) VERBOSE=1;;
+        h) echo "Usage: update.sh [-d <directory>] [-b]" $$ exit;;
         *) ;;
       esac
     else
@@ -42,7 +42,7 @@ function readopts {
 OPTIND=1
 readopts "$@"
 
-if [ VERBOSE==1 ]; then
+if [ $VERBOSE==1 ]; then
   echo "Updating store..."
   echo "Storing into directory: $EXTERNALS"
   echo "Building: $BUILD"
