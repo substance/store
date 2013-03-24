@@ -5,6 +5,7 @@ PROJECT_DIR=$(pwd)
 # sanity check: executed in the root folder?
 if [ ! -f src/store.js ]; then
   echo "store/update.sh must be executed in the root dir of the repository."
+  exit -1
 fi
 
 ##########################
@@ -87,7 +88,6 @@ if [ ! -f Makefile ]; then
 fi
 
 # always pull
-
 git pull origin devel
 make
 
@@ -100,7 +100,7 @@ if [ ! -d jsobjects ]; then
 fi
 
 cd jsobjects
-./update.sh -d $EXTERNALS -v
+./update.sh -d $EXTERNALS
 
 ######################
 # hiredis
