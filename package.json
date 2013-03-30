@@ -1,24 +1,24 @@
 {
-    "name": "substance-store",
-    "description": "Provides access to a Substance Document Store.",
-    "keywords": ["redis", "redisdb", "substance"],
-    "author": "Oliver Buchtala <oliver.buchtala@gmail.com>",
-    "version": "0.1.0",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/substance/store.git"
-    },
-    "engines": {
-        "node": ">=0.6.0"
-    },
-    "dependencies": {
-      "underscore": "1.4.x"
-    },
-    "scripts": {
-      "preinstall" : "./update.sh -d /tmp/substance -n && node-gyp configure build"
-    },
-    "main": "./src/store.js",
-    "directories": {
-        "lib": "./lib"
-    }
+  "name": "substance-store",
+  "description": "Provides access to a Substance Document Store.",
+  "keywords": ["redis", "redisdb", "substance"],
+  "author": "Oliver Buchtala <oliver.buchtala@gmail.com>",
+  "version": "0.1.0",
+  "repository": {
+      "type": "git",
+      "url": "https://github.com/substance/store.git"
+  },
+  "engines": {
+      "node": ">=0.6.0"
+  },
+  "dependencies": {
+    "underscore": "1.4.x"
+  },
+  "scripts": {
+    "preinstall" : "./update.sh -d /tmp/substance -n && node-gyp configure build"
+  },
+  "main": "./src/redis_store.js",
+  "directories": {
+      "lib": "./lib"
+  }
 }
