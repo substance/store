@@ -79,6 +79,11 @@
      */
 
     this.updateMeta = function(id, meta, cb) {
+      if (!meta) {
+        if (cb) cb(null);
+        return;
+      }
+
       if (!self.exists(id) && cb) {
         return cb({err: -1, msg: "Document does not exist."});
       }
@@ -93,31 +98,31 @@
     };
 
     /**
-     * Retrieves a document without content only containing meta information.
+     * Get document info (no contents)
      */
+
     this.getInfo = function(id, cb) {
-
       var doc = self.documents.getJSON(id);
-
-      doc.refs = {
-        "master": self.getRef(id, "master"),
-        "tail": self.getRef(id, "tail"),
-      };
-
       if (cb) cb(null, doc);
-
       return doc;
-    }
+    };
 
     /**
      * List all documents complete with metadata
      */
+
     this.list = function (cb) {
       var docIds = self.documents.getKeys();
       var docs = [];
 
       for (var idx = 0; idx < docIds.length; ++idx) {
-        var doc = self.getInfo(docIds[idx]);
+        var doc = self.documents.getJSON(docIds[idx]);
+
+        doc.refs = {
+          "master": self.getRef(docIds[idx], "master"),
+          "tail": self.getRef(docIds[idx], "tail"),
+        };
+
         docs.push(doc);
       }
 
@@ -148,8 +153,8 @@
      *  @param newCommits an array of commit objects
      *  @param cb callback
      */
+    function update_old(id, newCommits, cb) {
 
-    this.update = function(id, newCommits, cb) {
       // No commits supplied. Go ahead
       if (newCommits.length === 0) {
         cb(null);
@@ -202,9 +207,33 @@
 
       console.log('Stored these commits in the database', newCommits);
 
+
       if (cb) cb(null);
       return true;
     };
+
+    this.update = function(id, newCommits, cb_or_meta, refs, cb) {
+      // TODO: remove this legacy dispatcher as soon we are stable again
+      if(arguments.length < 4) {
+        var cb = cb_or_meta;
+        return update_old(id, newCommits, cb);
+      } else {
+        var meta = cb_or_meta;
+        update_old(id, newCommits, function(err) {
+          // TODO: what about rolling back on errors?
+          if (cb && err) return cb(err);
+
+          self.updateMeta(id, meta, function(err) {
+            // TODO: what about rolling back on errors?
+            if (cb && err) return cb(err);
+            _.each(refs, function(value, key, refs) {
+              self.setRef(key, value);
+            });
+            if (cb) cb(null);
+          });
+        });
+      }
+    }
 
     this.setRef = function(id, ref, sha, cb) {
       self.redis.setString(id + ":refs:" + ref, sha);
@@ -307,6 +336,11 @@
 
   };
 
+  this.clear = function(cb) {
+    self.redis.removeWithPrefix("");
+    if (cb) cb(null);
+  };
+
   // Exports
   if (typeof exports !== 'undefined') {
     // Store = exports;
@@ -314,7 +348,9 @@
     exports.RedisStore = RedisStore;
     // exports.redisstore = new RedisStore();
   } else {
+    if (!ctx.Substance) ctx.Substance = {};
+
     ctx.RedisStore = RedisStore; // -> window.Substance.RedisStore
-    // window.redisstore = new RedisStore();
+    ctx.Substance.RedisStore = RedisStore;
   }
 })(this);
