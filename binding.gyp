@@ -1,6 +1,6 @@
 {
   "variables": {
-    'externals': '/tmp/substance',
+    'externals': '$(HOME)/tmp/substance',
   },
   "targets": [
     {
