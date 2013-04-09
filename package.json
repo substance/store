@@ -15,7 +15,7 @@
     "underscore": "1.4.x"
   },
   "scripts": {
-    "preinstall" : "./update.sh -d /tmp/substance -n && node-gyp configure build"
+    "preinstall" : "./update.sh -d $HOME/tmp/substance -n && node-gyp configure build"
   },
   "main": "./src/redis_store.js",
   "directories": {
