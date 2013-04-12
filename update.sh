@@ -3,7 +3,7 @@
 PROJECT_DIR=$(pwd)
 
 # sanity check: executed in the root folder?
-if [ ! -f src/store.js ]; then
+if [ ! -f src/remote_store.js ]; then
   echo "store/update.sh must be executed in the root dir of the repository."
   exit -1
 fi
