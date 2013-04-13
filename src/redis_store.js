@@ -27,7 +27,14 @@
     self.redis.setScope(settings.scope);
     self.redis.connect();
 
-    self.documents = self.redis.asHash("documents");
+    var documents = self.redis.asHash("documents");
+    var deletedDocuments = self.redis.asHash("deleted-documents");
+
+
+    function markAsDeleted(id) {
+      deletedDocuments.set(id, id);
+      return true;
+    }
 
     this.snapshotKey = function(id) {
       return id + ":snapshots"
@@ -40,7 +47,7 @@
      */
 
     this.exists = function (id, cb) {
-      var result = self.documents.contains(id);
+      var result = documents.contains(id);
       if (cb) cb(result);
       return result;
     };
@@ -64,7 +71,7 @@
 
       // TODO: what to do if this fails?
       // TODO: create initial list for commits
-      self.documents.set(id, doc);
+      documents.set(id, doc);
 
       if (cb) cb(null, doc);
 
@@ -78,14 +85,16 @@
      * @param cb callback
      */
 
+    // TODO should be private now
     this.updateMeta = function(id, meta, cb) {
       if (!meta) {
         if (cb) cb(null);
-        return;
+        return true;
       }
 
       if (!self.exists(id) && cb) {
-        return cb({err: -1, msg: "Document does not exist."});
+        cb({err: -1, msg: "Document does not exist."});
+        return false;
       }
 
       var doc = {
@@ -93,8 +102,10 @@
         "meta": meta
       };
 
-      self.documents.set(id, doc);
+      documents.set(id, doc);
       if (cb) cb(null, doc);
+
+      return true;
     };
 
     /**
@@ -102,7 +113,7 @@
      */
 
     this.getInfo = function(id, cb) {
-      var doc = self.documents.getJSON(id);
+      var doc = documents.getJSON(id);
       if (cb) cb(null, doc);
       return doc;
     };
@@ -112,11 +123,11 @@
      */
 
     this.list = function (cb) {
-      var docIds = self.documents.getKeys();
+      var docIds = documents.getKeys();
       var docs = [];
 
       for (var idx = 0; idx < docIds.length; ++idx) {
-        var doc = self.documents.getJSON(docIds[idx]);
+        var doc = documents.getJSON(docIds[idx]);
 
         doc.refs = {
           "master": self.getRef(docIds[idx], "master"),
@@ -141,11 +152,13 @@
      */
 
     this.delete = function (id, cb) {
-      self.documents.remove(id);
+      documents.remove(id);
       self.redis.removeWithPrefix(id);
+      markAsDeleted(id);
       if (cb) cb(null);
       return true;
     };
+
 
     /**
      *  Stores a sequence of commits for a given document id.
@@ -153,7 +166,9 @@
      *  @param newCommits an array of commit objects
      *  @param cb callback
      */
-    function update_old(id, newCommits, cb) {
+    function updateCommits(id, newCommits, cb) {
+
+      // TODO: this does not to be asynchronous anymore as it is used privately only
 
       // No commits supplied. Go ahead
       if (newCommits.length === 0) {
@@ -207,37 +222,61 @@
 
       console.log('Stored these commits in the database', newCommits);
 
-
       if (cb) cb(null);
       return true;
     };
 
+    function updateRefs(id, refs, cb) {
+      _.each(refs, function(value, key, refs) {
+        self.setRef(id, key, value);
+      });
+      if (cb) cb(null);
+      return true;
+    }
+
+    this.update_new = function(id, options, cb) {
+      // TODO: remove this legacy dispatcher as soon we are stable again
+      var success = true;
+
+      // Note: providing a special error callback to pass through detailed error messages
+      // but not messages on success which will be done once for all
+      function errCb(err) {
+        // don't call on success
+        if (cb && err) cb(err); 
+      }
+
+      // update the document depending on available data and stop if an error occurs
+      if(options.commits) success = updateCommits(id, options.commits, errCb);
+      if(success && options.meta) success = self.updateMeta(id, options.meta, errCb);
+      if(success && options.refs) success = updateRefs(id, options.refs, errCb);
+
+      if (cb && success) cb(null);
+
+      return success;
+
+    }
+
     this.update = function(id, newCommits, cb_or_meta, refs, cb) {
       // TODO: remove this legacy dispatcher as soon we are stable again
-      if(arguments.length < 4) {
-        var cb = cb_or_meta;
-        return update_old(id, newCommits, cb);
-      } else {
-        var meta = cb_or_meta;
-        update_old(id, newCommits, function(err) {
-          // TODO: what about rolling back on errors?
-          if (cb && err) return cb(err);
-
-          self.updateMeta(id, meta, function(err) {
-            // TODO: what about rolling back on errors?
-            if (cb && err) return cb(err);
-            _.each(refs, function(value, key, refs) {
-              self.setRef(key, value);
-            });
-            if (cb) cb(null);
-          });
-        });
-      }
-    }
+      // var succes;
+      // if(arguments.length < 4) {
+      //   var cb = cb_or_meta;
+      //   meta = null;
+      //   return updateCommits(id, newCommits, cb);
+      // } else {
+      var meta = arguments.length < 4 ? null : cb_or_meta;
+      var cb = arguments.length < 4 ? cb_or_meta : cb;
+      return this.update_new(id, {
+        commits: newCommits,
+        meta: meta,
+        refs: refs
+      }, cb);
+    };
 
     this.setRef = function(id, ref, sha, cb) {
       self.redis.setString(id + ":refs:" + ref, sha);
       if (cb) cb(null);
+      return true;
     };
 
     this.getRef = function(id, ref, cb) {
@@ -307,7 +346,7 @@
         return null;
       }
 
-      var doc = self.documents.getJSON(id);
+      var doc = documents.getJSON(id);
       doc.commits = {};
 
       var lastSha = self.getRef(id, "tail");
@@ -334,23 +373,109 @@
       return doc;
     };
 
+    this.clear = function(cb) {
+      self.redis.removeWithPrefix("");
+      if (cb) cb(null);
+    };
+
+
+    this.deletedDocuments = function(cb) {
+      var res = deletedDocuments.getKeys();
+      if (cb) cb(null, res);
+      return res;
+    };
+
+    this.confirmDeletion = function(id, cb) {
+      var res = deletedDocuments.remove(id);
+      if (cb) cb(res ? null : 'could_not_confirm_deletion');
+      return res;
+    };
+
+    // TODO: consider branches
+    this.import = function(data, cb) {
+      // var success = true;
+      var success = _.every(data['documents'], function(doc, id) {
+        if (self.exists(id)) {
+          self.delete(id);
+          self.confirmDeletion(id);
+        }
+
+        if (self.create(id)) {
+          var commits = [];
+
+          if (doc.refs.tail) {
+            var c = doc.commits[doc.refs.tail];
+            commits.push(c);
+
+            while (c = doc.commits[c.parent]) {
+              commits.push(c);
+            }
+          }
+
+          // console.log('LE COMMITS MISSIEU', commits);
+          var options = {
+            commits: commits.reverse(),
+            meta: doc.meta,
+            refs: doc.refs
+          };
+          if (!self.update_new(id, options, cb)) {
+            console.log('update failed');
+            if (cb) cb('update_failed');
+            return false; // success = false;
+          }
+        } else {
+          if (cb) cb('import_failed');
+          return false; // success = false;
+        }
+        return true;
+      });
+
+      // cb(success ? null : 'import_failed');
+      return success;
+    };
+
+    this.seed = function(data, cb) {
+      this.clear();
+      this.import(data, cb);
+      return true;
+    };
+
+
+    this.dump = function(cb) {
+      // TODO: how to dump settings?
+      var settings = {};
+      var deletedDocs = [];
+
+      var docs = {};
+      var docInfos = self.list();
+
+      _.each(docInfos, function(info, idx, docInfos) {
+        docs[info.id] = self.get(info.id);
+      });
+
+      _.each(deletedDocuments.getKeys(), function(id) {
+        deletedDocs.push(id);
+      });
+
+      var dump = {
+        'documents': docs,
+        'deleted-documents': deletedDocs
+      };
+
+      if (cb) cb(null, dump);
+      return dump;
+    };
+
   };
 
-  this.clear = function(cb) {
-    self.redis.removeWithPrefix("");
-    if (cb) cb(null);
-  };
+  RedisStore.prototype.name = "RedisStore";
 
   // Exports
   if (typeof exports !== 'undefined') {
-    // Store = exports;
-    // exports.Store = Store;
     exports.RedisStore = RedisStore;
-    // exports.redisstore = new RedisStore();
   } else {
     if (!ctx.Substance) ctx.Substance = {};
-
-    ctx.RedisStore = RedisStore; // -> window.Substance.RedisStore
+    ctx.RedisStore = RedisStore;
     ctx.Substance.RedisStore = RedisStore;
   }
 })(this);
