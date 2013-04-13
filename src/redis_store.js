@@ -256,14 +256,8 @@
 
     }
 
+    // TODO: remove this legacy dispatcher as soon as we are stable again
     this.update = function(id, newCommits, cb_or_meta, refs, cb) {
-      // TODO: remove this legacy dispatcher as soon we are stable again
-      // var succes;
-      // if(arguments.length < 4) {
-      //   var cb = cb_or_meta;
-      //   meta = null;
-      //   return updateCommits(id, newCommits, cb);
-      // } else {
       var meta = arguments.length < 4 ? null : cb_or_meta;
       var cb = arguments.length < 4 ? cb_or_meta : cb;
       return this.update_new(id, {
