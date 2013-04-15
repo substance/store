@@ -220,7 +220,7 @@
       self.setRef(id, "master", lastSha);
       self.setRef(id, "tail", lastSha);
 
-      console.log('Stored these commits in the database', newCommits);
+      // console.log('Stored these commits in the database', newCommits);
 
       if (cb) cb(null);
       return true;
@@ -242,7 +242,7 @@
       // but not messages on success which will be done once for all
       function errCb(err) {
         // don't call on success
-        if (cb && err) cb(err); 
+        if (cb && err) cb(err);
       }
 
       // update the document depending on available data and stop if an error occurs
