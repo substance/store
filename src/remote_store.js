@@ -40,7 +40,10 @@
     // -------
 
     this.exists = function (id, cb) {
-      this.client.getDocument(id, cb);
+      this.client.listDocuments(function(err, docs) {
+        if (err) cb(err);
+        cb(null, (id in docs));
+      });
     };
 
     // Retrieves a range of the document's commits
