@@ -6,7 +6,7 @@
   // Native extension
   if (typeof exports !== 'undefined') {
     var redis = require('../lib/redis');
-    var errors = require('../util/errors');
+    var errors = require('../../util/errors');
     var _ = require('underscore');
   } else {
     var redis = root.redis;
@@ -142,8 +142,10 @@
         var doc = documents.getJSON(docIds[idx]);
 
         doc.refs = {
-          "master": self.getRef(docIds[idx], "master"),
-          "tail": self.getRef(docIds[idx], "tail"),
+          "master": {
+            "head": self.getRef(docIds[idx], "master", "head"),
+            "last": self.getRef(docIds[idx], "master", "last"),
+          }
         };
 
         docs.push(doc);
@@ -233,8 +235,8 @@
         self.redis.set(commitsKey + ":" + newCommits[idx].sha, commit);
       }
 
-      self.setRef(id, "master", lastSha);
-      self.setRef(id, "tail", lastSha);
+      self.setRef(id, "master", "head", lastSha);
+      self.setRef(id, "master", "last", lastSha);
 
       // console.log('Stored these commits in the database', newCommits);
 
@@ -243,8 +245,10 @@
     };
 
     function updateRefs(id, refs, cb) {
-      _.each(refs, function(value, key, refs) {
-        self.setRef(id, key, value);
+      _.each(refs, function(branchRefs, branch) {
+        _.each(branchRefs, function(sha, ref) {
+          self.setRef(id, branch, ref, sha);
+        });
       });
       if (cb) cb(null);
       return true;
@@ -287,14 +291,14 @@
       return this.update_new(id, options, cb);
     };
 
-    this.setRef = function(id, ref, sha, cb) {
-      self.redis.setString(id + ":refs:" + ref, sha);
+    this.setRef = function(id, branch, ref, sha, cb) {
+      self.redis.setString(id + ":refs:" + branch + ":" + ref, sha);
       if (cb) cb(null);
       return true;
     };
 
-    this.getRef = function(id, ref, cb) {
-      var key = id + ":refs:" + ref;
+    this.getRef = function(id, branch, ref, cb) {
+      var key = id + ":refs:" + branch + ":" + ref;
       var sha = self.redis.exists(key) ? self.redis.get(key) : null;
       if(cb) cb(null, sha);
       return sha;
@@ -363,11 +367,13 @@
       var doc = documents.getJSON(id);
       doc.commits = {};
 
-      var lastSha = self.getRef(id, "tail");
+      var lastSha = self.getRef(id, "master", "last");
 
       doc.refs = {
-        "master": self.getRef(id, "master"),
-        "tail": lastSha,
+        "master" : {
+          "head": self.getRef(id, "master", "head"),
+          "last": lastSha,
+        }
       };
 
       if (lastSha) {
@@ -423,8 +429,8 @@
         if (self.create(id)) {
           var commits = [];
 
-          if (doc.refs.tail) {
-            var c = doc.commits[doc.refs.tail];
+          if (doc.refs.master.last) {
+            var c = doc.commits[doc.refs.master.last];
             commits.push(c);
 
             while (c = doc.commits[c.parent]) {
@@ -438,6 +444,7 @@
             meta: doc.meta,
             refs: doc.refs
           };
+
           if (!self.update_new(id, options, cb)) {
             var err = new errors.RedisStoreError("Update failed.");
             if (cb) cb(err); else console.log(err);
