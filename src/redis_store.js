@@ -1,9 +1,21 @@
-(function(ctx){
+
+(function(){
+
+  var root = this;
 
   // Native extension
-  var redis = typeof exports !== 'undefined' ? require('../lib/redis') : ctx.redis;
-  var _ = typeof exports !== 'undefined' ? require('underscore') : ctx._;
+  if (typeof exports !== 'undefined') {
+    var redis = require('../lib/redis');
+    var errors = require('../util/errors');
+    var _ = require('underscore');
+  } else {
+    var redis = root.redis;
+    var errors = root.Substance.errors;
+    var _ = root._;
+  }
 
+  // TODO: discuss about error codes
+  errors.define('RedisStoreError', -1);
 
   var RedisStore = function(settings) {
     // reference to this for use within instance methods
@@ -48,7 +60,7 @@
 
     this.exists = function (id, cb) {
       var result = documents.contains(id);
-      if (cb) cb(result);
+      if (cb) cb(null, result);
       return result;
     };
 
@@ -58,7 +70,7 @@
      */
     this.create = function (id, cb) {
       if(self.exists(id) && cb) {
-        return cb({err: -1, msg: "Document already exists."});
+        return cb(new errors.RedisStoreError("Document already exists."));
       }
 
       var doc = {
@@ -93,7 +105,7 @@
       }
 
       if (!self.exists(id) && cb) {
-        cb({err: -1, msg: "Document does not exist."});
+        cb(new errors.RedisStoreError("Document does not exist."));
         return false;
       }
 
@@ -189,7 +201,7 @@
       var lastSha = newCommits[0].parent;
       if (lastSha && !self.redis.exists(commitsKey + ":" + lastSha)) {
         var msg = "Parent commit not found.";
-        cb ? cb({"error": msg}) : console.log(msg);
+        cb ? cb(new errors.RedisStoreError(msg)) : console.log(msg);
         return false;
       }
 
@@ -199,8 +211,8 @@
 
         // commit must be in proper order
         if (lastSha && commit.parent != lastSha) {
-          var err = {err: -1, msg: "Invalid commit chain."};
-          cb ? cb(err) : console.log(err.msg);
+          var err = new errors.RedisStoreError("Invalid commit chain.");
+          cb ? cb(err) : console.log(err);
           return false;
         }
 
@@ -210,7 +222,11 @@
       // save the commits after knowing that everything is fine
       for (var idx = 0; idx < newCommits.length; idx++) {
         var commit = newCommits[idx];
-        if (!_.isObject(commit)) throw "Can not store empty commit.";
+        if (!_.isObject(commit)) {
+          var err = new errors.RedisStoreError("Can not store empty commit.");
+          if (cb) cb(err); else console.log(err);
+          return false;
+        }
 
         commits.addAsString(commit.sha);
         // store the commit's data into an own field
@@ -242,7 +258,10 @@
       // but not messages on success which will be done once for all
       function errCb(err) {
         // don't call on success
-        if (cb && err) cb(err);
+        if(err) {
+          console.log(err);
+          if (cb) cb(err);
+        }
       }
 
       // update the document depending on available data and stop if an error occurs
@@ -260,11 +279,12 @@
     this.update = function(id, newCommits, cb_or_meta, refs, cb) {
       var meta = arguments.length < 4 ? null : cb_or_meta;
       var cb = arguments.length < 4 ? cb_or_meta : cb;
-      return this.update_new(id, {
+      var options = {
         commits: newCommits,
         meta: meta,
         refs: refs
-      }, cb);
+      };
+      return this.update_new(id, options, cb);
     };
 
     this.setRef = function(id, ref, sha, cb) {
@@ -276,17 +296,15 @@
     this.getRef = function(id, ref, cb) {
       var key = id + ":refs:" + ref;
       var sha = self.redis.exists(key) ? self.redis.get(key) : null;
-
-      if(cb) cb(0, sha);
+      if(cb) cb(null, sha);
       return sha;
     };
 
     this.setSnapshot = function (id, data, title, cb) {
       var snapshots = self.redis.asHash(self.snapshotKey(id));
       snapshots.set(title, data);
-      if(cb) { cb(null); }
+      if(cb) cb(null);
     };
-
 
     /**
      * Retrieves a range of the document's commits
@@ -336,7 +354,9 @@
     this.get = function(id, cb) {
 
       if(!self.exists(id)) {
-        if (cb) cb({error: "Document does not exist."});
+        var err = new errors.RedisStoreError("Document does not exist.");
+        if (cb) cb(err);
+        console.log(err);
         return null;
       }
 
@@ -359,11 +379,13 @@
       }
 
       if (lastSha && !doc.commits[lastSha]) {
-        console.log('Corrupted Document: ', doc);
-        throw "Document corrupted, contains empty commit";
+        var err = new errors.RedisStoreError('Corrupted Document: contains empty commits');
+        console.log(err, doc);
+        if (cb) cb(err);
+        return null;
       }
 
-      if(cb) cb(0, doc);
+      if(cb) cb(null, doc);
       return doc;
     };
 
@@ -380,9 +402,13 @@
     };
 
     this.confirmDeletion = function(id, cb) {
-      var res = deletedDocuments.remove(id);
-      if (cb) cb(res ? null : 'could_not_confirm_deletion');
-      return res;
+      var success = deletedDocuments.remove(id);
+      if (!success) {
+        var err = new errors.RedisStoreError("Could not confirm deletion.");
+        if (cb) cb(err);
+        else console.log(err);
+      }
+      return success;
     };
 
     // TODO: consider branches
@@ -413,18 +439,18 @@
             refs: doc.refs
           };
           if (!self.update_new(id, options, cb)) {
-            console.log('update failed');
-            if (cb) cb('update_failed');
+            var err = new errors.RedisStoreError("Update failed.");
+            if (cb) cb(err); else console.log(err);
             return false; // success = false;
           }
         } else {
-          if (cb) cb('import_failed');
+          var err = new errors.RedisStoreError("Import failed.");
+          if (cb) cb(err); else console.log(err);
           return false; // success = false;
         }
         return true;
       });
 
-      // cb(success ? null : 'import_failed');
       return success;
     };
 
@@ -468,8 +494,8 @@
   if (typeof exports !== 'undefined') {
     exports.RedisStore = RedisStore;
   } else {
-    if (!ctx.Substance) ctx.Substance = {};
-    ctx.RedisStore = RedisStore;
-    ctx.Substance.RedisStore = RedisStore;
+    root.RedisStore = RedisStore;
+    root.Substance.RedisStore = RedisStore;
   }
+
 })(this);
