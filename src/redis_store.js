@@ -517,6 +517,7 @@
         return blob;
       } else {
         if (cb) cb(new errors.RedisStoreError("Blob already exists."));
+        return false;
       }
     };
 
