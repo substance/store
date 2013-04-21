@@ -18,6 +18,10 @@
   errors.define('RedisStoreError', -1);
 
   var RedisStore = function(settings) {
+
+    // Initialization
+    // --------
+
     // reference to this for use within instance methods
     var self = this;
 
@@ -40,8 +44,12 @@
     self.redis.connect();
 
     var documents = self.redis.asHash("documents");
+    var blobs = self.redis.asHash("blobs");
     var deletedDocuments = self.redis.asHash("deleted-documents");
 
+
+    // Private Methods
+    // ========
 
     function markAsDeleted(id) {
       deletedDocuments.set(id, id);
@@ -52,11 +60,13 @@
       return id + ":snapshots"
     };
 
-    /**
-     *  Checks if a document exists
-     *  @param id the document's id
-     *  @param cb callback
-     */
+
+    // Public Interface
+    // ========
+
+
+    // Checks if a document exists
+    // --------
 
     this.exists = function (id, cb) {
       var result = documents.contains(id);
@@ -64,10 +74,9 @@
       return result;
     };
 
-    /**
-     * Creates a new document with the provided id
-     * @param cb callback
-     */
+    // Creates a new document with the provided id
+    // --------
+
     this.create = function (id, cb) {
       if(self.exists(id) && cb) {
         return cb(new errors.RedisStoreError("Document already exists."));
@@ -86,18 +95,14 @@
       documents.set(id, doc);
 
       if (cb) cb(null, doc);
-
       return doc;
     };
 
-    /**
-     * Updates an existing document with the provided metadata object
-     * @param id the document id
-     * @param meta object containing all metadata
-     * @param cb callback
-     */
+    // Updates an existing document with the provided metadata object
+    // --------
+    // 
+    // meta:  object containing all metadata
 
-    // TODO should be private now
     this.updateMeta = function(id, meta, cb) {
       if (!meta) {
         if (cb) cb(null);
@@ -120,9 +125,8 @@
       return true;
     };
 
-    /**
-     * Get document info (no contents)
-     */
+    // Get document info (no contents)
+    // --------
 
     this.getInfo = function(id, cb) {
       var doc = documents.getJSON(id);
@@ -278,6 +282,7 @@
       return success;
 
     }
+
 
     // TODO: remove this legacy dispatcher as soon as we are stable again
     this.update = function(id, newCommits, cb_or_meta, refs, cb) {
@@ -491,6 +496,72 @@
 
       if (cb) cb(null, dump);
       return dump;
+    };
+
+
+    // Blob Interface
+    // ========
+
+    // Create a new blob for given data
+    // --------
+
+    this.createBlob = function(id, base64data, cb) {
+      if (!this.blobExists(id)) {
+        var blob = {
+          data: base64data,
+          id: id
+        };
+
+        blobs.set(id, blob);
+        if (cb) cb(null, blob);
+        return blob;
+      } else {
+        if (cb) cb(new errors.RedisStoreError("Blob already exists."));
+      }
+    };
+
+
+    // Get Blob by id
+    // --------
+
+    this.getBlob = function(id, cb) {
+      var blob = blobs.getJSON(id);
+
+      if (blob) {
+        if (cb) cb(null, blob.data);
+        return blob.data;
+      } else {
+        if (cb) cb(new errors.RedisStoreError("Blob not found."));  
+        return null;
+      }
+    };
+
+    // Checks if blob exists
+    // --------
+
+    this.blobExists = function (id, cb) {
+      var result = blobs.contains(id);
+      if (cb) cb(null, result);
+      return result;
+    };
+
+    // Delete blob by given id
+    // --------
+
+    this.deleteBlob = function(id, cb) {
+      blobs.remove(id);
+      self.redis.removeWithPrefix(id);
+      if (cb) cb(null);
+      return true;
+    };
+
+    // Returns a list of blob ids
+    // --------
+
+    this.listBlobs = function(cb) {
+      var docIds = blobs.getKeys();
+      if (cb) cb(null, docIds);
+      return docIds;
     };
 
   };
