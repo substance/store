@@ -130,6 +130,7 @@
 
     this.getInfo = function(id, cb) {
       var doc = documents.getJSON(id);
+      doc.refs = this.getRefs(id);
       if (cb) cb(null, doc);
       return doc;
     };
@@ -144,14 +145,7 @@
 
       for (var idx = 0; idx < docIds.length; ++idx) {
         var doc = documents.getJSON(docIds[idx]);
-
-        doc.refs = {
-          "master": {
-            "head": self.getRef(docIds[idx], "master", "head"),
-            "last": self.getRef(docIds[idx], "master", "last"),
-          }
-        };
-
+        doc.refs = self.getRefs(docIds[idx]);
         docs.push(doc);
       }
 
@@ -239,22 +233,15 @@
         self.redis.set(commitsKey + ":" + newCommits[idx].sha, commit);
       }
 
-      self.setRef(id, "master", "head", lastSha);
-      self.setRef(id, "master", "last", lastSha);
-
       // console.log('Stored these commits in the database', newCommits);
 
       if (cb) cb(null);
       return true;
     };
 
+    // TODO: obsolete now
     function updateRefs(id, refs, cb) {
-      _.each(refs, function(branchRefs, branch) {
-        _.each(branchRefs, function(sha, ref) {
-          self.setRef(id, branch, ref, sha);
-        });
-      });
-      if (cb) cb(null);
+      self.setRefs(id, refs, cb);
       return true;
     }
 
@@ -273,12 +260,17 @@
       }
 
       // update the document depending on available data and stop if an error occurs
-      if(options.commits) success = updateCommits(id, options.commits, errCb);
-      if(success && options.meta) success = self.updateMeta(id, options.meta, errCb);
-      if(success && options.refs) success = updateRefs(id, options.refs, errCb);
+      if(options.commits) {
+        success = updateCommits(id, options.commits, errCb);
+      }
+      if(success && options.meta) {
+        success = self.updateMeta(id, options.meta, errCb);
+      }
+      if(success && options.refs) {
+        success = updateRefs(id, options.refs, errCb);
+      }
 
-      if (cb && success) cb(null);
-
+      if(cb) cb(null, success);
       return success;
 
     }
@@ -296,17 +288,43 @@
       return this.update_new(id, options, cb);
     };
 
-    this.setRef = function(id, branch, ref, sha, cb) {
-      self.redis.setString(id + ":refs:" + branch + ":" + ref, sha);
+    this.setRefs = function(id, branch_or_refs, refs_or_cb, cb) {
+      var references = self.redis.asHash(id + ":refs");
+      if (arguments.length == 2 || _.isFunction(refs_or_cb)) {
+        cb = refs_or_cb;
+        var refs = branch_or_refs;
+        _.each(refs, function(branchRefs, branch) {
+          var tmp = references.getJSON(branch) || {};
+          branchRefs = _.extend(tmp, branchRefs);
+          references.set(branch, branchRefs);
+        });
+      } else {
+        var branch = branch_or_refs;
+        var refs = refs_or_cb;
+        var tmp = references.getJSON(branch) || {};
+        refs = _.extend(tmp, refs);
+        references.set(branch, refs);
+      }
       if (cb) cb(null);
       return true;
     };
 
-    this.getRef = function(id, branch, ref, cb) {
-      var key = id + ":refs:" + branch + ":" + ref;
-      var sha = self.redis.exists(key) ? self.redis.get(key) : null;
-      if(cb) cb(null, sha);
-      return sha;
+    this.getRefs = function(id, branch_or_cb, cb) {
+      var references = self.redis.asHash(id + ":refs");
+      var res;
+      // return all refs if not branch is specified
+      if (arguments.length == 1 || _.isFunction(branch_or_cb)) {
+        cb = branch_or_cb;
+        res = {}
+        var branches = references.getKeys();
+        _.each(branches, function(branch) {
+          res[branch] = references.getJSON(branch);
+        });
+      } else {
+        res = references.getJSON(branch_or_cb);
+      }
+      if(cb) cb(null, res);
+      return res;
     };
 
     this.setSnapshot = function (id, data, title, cb) {
@@ -329,7 +347,10 @@
         return self.redis.getJSON( id + ":commits:" + sha);
       }
 
-      if (head === stop) return [];
+      if (head === stop) {
+        if (cb) cb(null, []);
+        return [];
+      }
       var commit = getCommit(head);
 
       if (!commit) {
@@ -372,14 +393,10 @@
       var doc = documents.getJSON(id);
       doc.commits = {};
 
-      var lastSha = self.getRef(id, "master", "last");
 
-      doc.refs = {
-        "master" : {
-          "head": self.getRef(id, "master", "head"),
-          "last": lastSha,
-        }
-      };
+      doc.refs = self.getRefs(id);
+
+      var lastSha = (doc.refs.master) ? doc.refs.master.last : null;
 
       if (lastSha) {
         var commits = self.commits(id, lastSha);
