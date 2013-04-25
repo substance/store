@@ -429,14 +429,12 @@
       return res;
     };
 
+    // TODO: Add error handling?
     this.confirmDeletion = function(id, cb) {
-      var success = deletedDocuments.remove(id);
-      if (!success) {
-        var err = new errors.RedisStoreError("Could not confirm deletion.");
-        if (cb) cb(err);
-        else console.log(err);
-      }
-      return success;
+      deletedDocuments.remove(id);
+      
+      cb(null);
+      return true;
     };
 
     // TODO: consider branches
