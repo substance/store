@@ -56,121 +56,9 @@
       return true;
     }
 
-    this.snapshotKey = function(id) {
+    function snapshotKey(id) {
       return id + ":snapshots"
     };
-
-
-    // Public Interface
-    // ========
-
-
-    // Checks if a document exists
-    // --------
-
-    this.exists = function (id, cb) {
-      var result = documents.contains(id);
-      if (cb) cb(null, result);
-      return result;
-    };
-
-    // Creates a new document with the provided id
-    // --------
-
-    this.create = function (id, cb) {
-      if(self.exists(id) && cb) {
-        return cb(new errors.RedisStoreError("Document already exists."));
-      }
-
-      var doc = {
-        "id": id,
-        "meta": {
-          "created_at": new Date(),
-          "updated_at": new Date()
-        }
-      };
-
-      // TODO: what to do if this fails?
-      // TODO: create initial list for commits
-      documents.set(id, doc);
-
-      if (cb) cb(null, doc);
-      return doc;
-    };
-
-    // Updates an existing document with the provided metadata object
-    // --------
-    // 
-    // meta:  object containing all metadata
-
-    this.updateMeta = function(id, meta, cb) {
-      if (!meta) {
-        if (cb) cb(null);
-        return true;
-      }
-
-      if (!self.exists(id) && cb) {
-        cb(new errors.RedisStoreError("Document does not exist."));
-        return false;
-      }
-
-      var doc = {
-        "id": id,
-        "meta": meta
-      };
-
-      documents.set(id, doc);
-      if (cb) cb(null, doc);
-
-      return true;
-    };
-
-    // Get document info (no contents)
-    // --------
-
-    this.getInfo = function(id, cb) {
-      var doc = documents.getJSON(id);
-      doc.refs = this.getRefs(id);
-      if (cb) cb(null, doc);
-      return doc;
-    };
-
-    /**
-     * List all documents complete with metadata
-     */
-
-    this.list = function (cb) {
-      var docIds = documents.getKeys();
-      var docs = [];
-
-      for (var idx = 0; idx < docIds.length; ++idx) {
-        var doc = documents.getJSON(docIds[idx]);
-        doc.refs = self.getRefs(docIds[idx]);
-        docs.push(doc);
-      }
-
-      // sort the documents in descending order with respect to the time of the last update
-      docs.sort(function(a, b) {
-        return new Date(b.meta.updated_at) - new Date(a.meta.updated_at);
-      });
-
-      if(cb) cb(null, docs);
-      return docs;
-    };
-
-    /**
-     *  Permanently deletes a document
-     *  @param cb callback
-     */
-
-    this.delete = function (id, cb) {
-      documents.remove(id);
-      self.redis.removeWithPrefix(id);
-      markAsDeleted(id);
-      if (cb) cb(null);
-      return true;
-    };
-
 
     /**
      *  Stores a sequence of commits for a given document id.
@@ -239,11 +127,247 @@
       return true;
     };
 
-    // TODO: obsolete now
-    function updateRefs(id, refs, cb) {
-      self.setRefs(id, refs, cb);
+    // TODO: consider branches
+    function importDump(data, cb) {
+      // var success = true;
+      var success = _.every(data['documents'], function(doc, id) {
+        if (self.exists(id)) {
+          self.delete(id);
+          self.confirmDeletion(id);
+        }
+
+        if (self.create(id)) {
+          var commits = [];
+
+          if (doc.refs.master.last) {
+            var c = doc.commits[doc.refs.master.last];
+            commits.push(c);
+
+            while (c = doc.commits[c.parent]) {
+              commits.push(c);
+            }
+          }
+
+          // console.log('LE COMMITS MISSIEU', commits);
+          var options = {
+            commits: commits.reverse(),
+            meta: doc.meta,
+            refs: doc.refs
+          };
+
+          if (!self.update_new(id, options, cb)) {
+            var err = new errors.RedisStoreError("Update failed.");
+            if (cb) cb(err); else console.log(err);
+            return false; // success = false;
+          }
+        } else {
+          var err = new errors.RedisStoreError("Import failed.");
+          if (cb) cb(err); else console.log(err);
+          return false; // success = false;
+        }
+        return true;
+      });
+
+      return success;
+    };
+
+    // Public Interface
+    // ========
+
+
+    // Checks if a document exists
+    // --------
+
+    this.exists = function (id, cb) {
+      var result = documents.contains(id);
+      if (cb) cb(null, result);
+      return result;
+    };
+
+    // Creates a new document with the provided id
+    // --------
+
+    this.create = function (id, cb) {
+      if(self.exists(id) && cb) {
+        return cb(new errors.RedisStoreError("Document already exists."));
+      }
+
+      var doc = {
+        "id": id,
+        "meta": {
+          "created_at": new Date(),
+          "updated_at": new Date()
+        }
+      };
+
+      // TODO: what to do if this fails?
+      // TODO: create initial list for commits
+      documents.set(id, doc);
+
+      if (cb) cb(null, doc);
+      return doc;
+    };
+
+    // Updates an existing document with the provided metadata object
+    // --------
+    //
+    // meta:  object containing all metadata
+
+    this.updateMeta = function(id, meta, cb) {
+      if (!meta) {
+        if (cb) cb(null);
+        return true;
+      }
+
+      if (!self.exists(id) && cb) {
+        cb(new errors.RedisStoreError("Document does not exist."));
+        return false;
+      }
+
+      var doc = {
+        "id": id,
+        "meta": meta
+      };
+
+      documents.set(id, doc);
+      if (cb) cb(null, doc);
+
       return true;
-    }
+    };
+
+    // Get document info (no contents)
+    // --------
+
+    this.getInfo = function(id, cb) {
+      var doc = documents.getJSON(id);
+      doc.refs = this.getRefs(id);
+      if (cb) cb(null, doc);
+      return doc;
+    };
+
+    /**
+     * List all documents complete with metadata
+     */
+
+    this.list = function (cb) {
+      var docIds = documents.getKeys();
+      var docs = [];
+
+      for (var idx = 0; idx < docIds.length; ++idx) {
+        var doc = documents.getJSON(docIds[idx]);
+        doc.refs = self.getRefs(docIds[idx]);
+        docs.push(doc);
+      }
+
+      // sort the documents in descending order with respect to the time of the last update
+      docs.sort(function(a, b) {
+        return new Date(b.meta.updated_at) - new Date(a.meta.updated_at);
+      });
+
+      if(cb) cb(null, docs);
+      return docs;
+    };
+
+    /**
+     * Retrieves a document
+     *
+     * @param id the document's id
+     * @param cb callback
+     */
+    this.get = function(id, cb) {
+
+      if(!self.exists(id)) {
+        var err = new errors.RedisStoreError("Document does not exist.");
+        if (cb) cb(err);
+        console.log(err);
+        return null;
+      }
+
+      var doc = documents.getJSON(id);
+      doc.commits = {};
+
+
+      doc.refs = self.getRefs(id);
+
+      var lastSha = (doc.refs.master) ? doc.refs.master.last : null;
+
+      if (lastSha) {
+        var commits = self.commits(id, lastSha);
+
+        _.each(commits, function(c) {
+          doc.commits[c.sha] = c;
+        });
+      }
+
+      if (lastSha && !doc.commits[lastSha]) {
+        var err = new errors.RedisStoreError('Corrupted Document: contains empty commits');
+        console.log(err, doc);
+        if (cb) cb(err);
+        return null;
+      }
+
+      if(cb) cb(null, doc);
+      return doc;
+    };
+
+    /**
+     * Retrieves a range of the document's commits
+     *
+     * @param id the document's id
+     * @param head where to start traversing the commits
+     * @param stop the commit that is excluded
+     */
+
+    this.commits = function(id, head, stop, cb) {
+
+      function getCommit(sha) {
+        return self.redis.getJSON( id + ":commits:" + sha);
+      }
+
+      if (head === stop) {
+        if (cb) cb(null, []);
+        return [];
+      }
+      var commit = getCommit(head);
+
+      if (!commit) {
+        if (cb) cb(null, []);
+        return [];
+      }
+
+      commit.sha = head;
+
+      var commits = [commit];
+      var prev = commit;
+
+      while (commit = getCommit(commit.parent)) {
+        if (stop && commit.sha === stop) break;
+        commit.sha = prev.parent;
+        commits.push(commit);
+        prev = commit;
+      }
+
+      commits = commits.reverse();
+      if (cb) cb(null, commits);
+      return commits;
+    };
+
+    /**
+     *  Permanently deletes a document
+     *  @param cb callback
+     */
+    this.delete = function (id, cb) {
+      documents.remove(id);
+      self.redis.removeWithPrefix(id);
+      markAsDeleted(id);
+      if (cb) cb(null);
+      return true;
+    };
+
+    this.clear = function(cb) {
+      self.redis.removeWithPrefix("");
+      if (cb) cb(null);
+    };
 
     this.update_new = function(id, options, cb) {
       // TODO: remove this legacy dispatcher as soon we are stable again
@@ -267,14 +391,13 @@
         success = self.updateMeta(id, options.meta, errCb);
       }
       if(success && options.refs) {
-        success = updateRefs(id, options.refs, errCb);
+        success = self.setRefs(id, options.refs, errCb);
       }
 
       if(cb) cb(null, success);
       return success;
 
     }
-
 
     // TODO: remove this legacy dispatcher as soon as we are stable again
     this.update = function(id, newCommits, cb_or_meta, refs, cb) {
@@ -328,100 +451,10 @@
     };
 
     this.setSnapshot = function (id, data, title, cb) {
-      var snapshots = self.redis.asHash(self.snapshotKey(id));
+      var snapshots = self.redis.asHash(snapshotKey(id));
       snapshots.set(title, data);
       if(cb) cb(null);
     };
-
-    /**
-     * Retrieves a range of the document's commits
-     *
-     * @param id the document's id
-     * @param head where to start traversing the commits
-     * @param stop the commit that is excluded
-     */
-
-    this.commits = function(id, head, stop, cb) {
-
-      function getCommit(sha) {
-        return self.redis.getJSON( id + ":commits:" + sha);
-      }
-
-      if (head === stop) {
-        if (cb) cb(null, []);
-        return [];
-      }
-      var commit = getCommit(head);
-
-      if (!commit) {
-        if (cb) cb(null, []);
-        return [];
-      }
-
-      commit.sha = head;
-
-      var commits = [commit];
-      var prev = commit;
-
-      while (commit = getCommit(commit.parent)) {
-        if (stop && commit.sha === stop) break;
-        commit.sha = prev.parent;
-        commits.push(commit);
-        prev = commit;
-      }
-
-      commits = commits.reverse();
-      if (cb) cb(null, commits);
-      return commits;
-    };
-
-    /**
-     * Retrieves a document
-     *
-     * @param id the document's id
-     * @param cb callback
-     */
-    this.get = function(id, cb) {
-
-      if(!self.exists(id)) {
-        var err = new errors.RedisStoreError("Document does not exist.");
-        if (cb) cb(err);
-        console.log(err);
-        return null;
-      }
-
-      var doc = documents.getJSON(id);
-      doc.commits = {};
-
-
-      doc.refs = self.getRefs(id);
-
-      var lastSha = (doc.refs.master) ? doc.refs.master.last : null;
-
-      if (lastSha) {
-        var commits = self.commits(id, lastSha);
-
-        _.each(commits, function(c) {
-          doc.commits[c.sha] = c;
-        });
-      }
-
-      if (lastSha && !doc.commits[lastSha]) {
-        var err = new errors.RedisStoreError('Corrupted Document: contains empty commits');
-        console.log(err, doc);
-        if (cb) cb(err);
-        return null;
-      }
-
-      if(cb) cb(null, doc);
-      return doc;
-    };
-
-    this.clear = function(cb) {
-      self.redis.removeWithPrefix("");
-      if (cb) cb(null);
-    };
-
 
     this.deletedDocuments = function(cb) {
       var res = deletedDocuments.getKeys();
@@ -432,58 +465,14 @@
     // TODO: Add error handling?
     this.confirmDeletion = function(id, cb) {
       deletedDocuments.remove(id);
-      
+
       cb(null);
       return true;
     };
 
-    // TODO: consider branches
-    this.import = function(data, cb) {
-      // var success = true;
-      var success = _.every(data['documents'], function(doc, id) {
-        if (self.exists(id)) {
-          self.delete(id);
-          self.confirmDeletion(id);
-        }
-
-        if (self.create(id)) {
-          var commits = [];
-
-          if (doc.refs.master.last) {
-            var c = doc.commits[doc.refs.master.last];
-            commits.push(c);
-
-            while (c = doc.commits[c.parent]) {
-              commits.push(c);
-            }
-          }
-
-          // console.log('LE COMMITS MISSIEU', commits);
-          var options = {
-            commits: commits.reverse(),
-            meta: doc.meta,
-            refs: doc.refs
-          };
-
-          if (!self.update_new(id, options, cb)) {
-            var err = new errors.RedisStoreError("Update failed.");
-            if (cb) cb(err); else console.log(err);
-            return false; // success = false;
-          }
-        } else {
-          var err = new errors.RedisStoreError("Import failed.");
-          if (cb) cb(err); else console.log(err);
-          return false; // success = false;
-        }
-        return true;
-      });
-
-      return success;
-    };
-
     this.seed = function(data, cb) {
       this.clear();
-      this.import(data, cb);
+      importDump(data, cb);
       return true;
     };
 
@@ -547,7 +536,7 @@
         if (cb) cb(null, blob.data);
         return blob.data;
       } else {
-        if (cb) cb(new errors.RedisStoreError("Blob not found."));  
+        if (cb) cb(new errors.RedisStoreError("Blob not found."));
         return null;
       }
     };
