@@ -239,6 +239,12 @@
     // --------
 
     this.getInfo = function(id, cb) {
+
+      if (!self.exists(id)) {
+        if(cb) cb(new errors.RedisStoreError("Document does not exist."));
+        return null;
+      }
+
       var doc = documents.getJSON(id);
       doc.refs = this.getRefs(id);
       if (cb) cb(null, doc);
@@ -279,7 +285,6 @@
       if(!self.exists(id)) {
         var err = new errors.RedisStoreError("Document does not exist.");
         if (cb) cb(err);
-        console.log(err);
         return null;
       }
 
