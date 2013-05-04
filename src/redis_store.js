@@ -44,7 +44,6 @@
     self.redis.connect();
 
     var documents = self.redis.asHash("documents");
-    var blobs = self.redis.asHash("blobs");
     var deletedDocuments = self.redis.asHash("deleted-documents");
 
 
@@ -499,17 +498,24 @@
     // Blob Interface
     // ========
 
+    function _blobs(docId) {
+      var key = docId + ":blobs";
+      return self.redis.asHash(key);
+    }
+
     // Create a new blob for given data
     // --------
 
-    this.createBlob = function(id, base64data, cb) {
-      if (!this.blobExists(id)) {
-        var blob = {
-          data: base64data,
-          id: id
-        };
+    this.createBlob = function(docId, blobId, base64data, cb) {
+      var blobs = _blobs(docId);
 
-        blobs.set(id, blob);
+      if (!blobs.contains(blobId)) {
+        var blob = {
+          id: blobId,
+          document: docId,
+          data: base64data
+        };
+        blobs.set(docId, blob);
         if (cb) cb(null, blob);
         return blob;
       } else {
@@ -522,12 +528,12 @@
     // Get Blob by id
     // --------
 
-    this.getBlob = function(id, cb) {
-      var blob = blobs.getJSON(id);
-
+    this.getBlob = function(docId, blobId, cb) {
+      var blobs = _blobs(docId);
+      var blob = blobs.getJSON(blobId);
       if (blob) {
-        if (cb) cb(null, blob.data);
-        return blob.data;
+        if (cb) cb(null, blob);
+        return blob;
       } else {
         if (cb) cb(new errors.RedisStoreError("Blob not found."));
         return null;
@@ -537,18 +543,26 @@
     // Checks if blob exists
     // --------
 
-    this.blobExists = function (id, cb) {
-      var result = blobs.contains(id);
-      if (cb) cb(null, result);
-      return result;
+    this.blobExists = function (docId, blobId, cb) {
+      var blobs = _blobs(docId);
+
+      if (blobs.contains(blobId)) {
+        if (cb) cb(null);
+        return true;
+      } else {
+        if (cb) cb("Blob does not exist.");
+        return false;
+      }
     };
 
     // Delete blob by given id
     // --------
 
-    this.deleteBlob = function(id, cb) {
+    this.deleteBlob = function(docId, blobId, cb) {
+      var blobs = _blobs(docId);
+
       blobs.remove(id);
-      self.redis.removeWithPrefix(id);
+
       if (cb) cb(null);
       return true;
     };
@@ -556,7 +570,9 @@
     // Returns a list of blob ids
     // --------
 
-    this.listBlobs = function(cb) {
+    this.listBlobs = function(docId, cb) {
+      var blobs = _blobs(docId);
+
       var docIds = blobs.getKeys();
       if (cb) cb(null, docIds);
       return docIds;

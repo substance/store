@@ -60,6 +60,23 @@
     this.update = function(id, options, cb) {
       this.client.updateDocument(id, options, cb);
     };
+
+    this.createBlob = function(docId, blobId, data, cb) {
+      return this.client.createBlob(docId, blobId, data, cb);
+    }
+
+    this.getBlob = function(docId, blobId, data, cb) {
+      return this.client.getBlob(docId, blobId, data, cb);
+    }
+
+    this.deleteBlob = function(docId, blobId, cb) {
+      return this.client.deleteBlob(docId, blobId, cb);
+    }
+
+    this.listBlobs = function(docId, cb) {
+      return this.client.listBlobs(docId, cb);
+    }
+
   };
 
 
