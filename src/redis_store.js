@@ -515,7 +515,7 @@
           document: docId,
           data: base64data
         };
-        blobs.set(docId, blob);
+        blobs.set(blobId, blob);
         if (cb) cb(null, blob);
         return blob;
       } else {
