@@ -127,6 +127,33 @@
       return true;
     };
 
+    // Updates an existing document with the provided metadata object
+    // --------
+    //
+    // meta:  object containing all metadata
+
+    function updateMeta(id, meta, cb) {
+      if (!meta) {
+        if (cb) cb(null);
+        return true;
+      }
+
+      if (!self.exists(id) && cb) {
+        cb(new errors.RedisStoreError("Document does not exist."));
+        return false;
+      }
+
+      var doc = {
+        "id": id,
+        "meta": meta
+      };
+
+      documents.set(id, doc);
+      if (cb) cb(null, doc);
+
+      return true;
+    };
+
     // TODO: consider branches
     function importDump(data, cb) {
       // var success = true;
@@ -155,7 +182,7 @@
             refs: doc.refs
           };
 
-          if (!self.update_new(id, options, cb)) {
+          if (!self.update(id, options, cb)) {
             var err = new errors.RedisStoreError("Update failed.");
             if (cb) cb(err); else console.log(err);
             return false; // success = false;
@@ -206,33 +233,6 @@
 
       if (cb) cb(null, doc);
       return doc;
-    };
-
-    // Updates an existing document with the provided metadata object
-    // --------
-    //
-    // meta:  object containing all metadata
-
-    this.updateMeta = function(id, meta, cb) {
-      if (!meta) {
-        if (cb) cb(null);
-        return true;
-      }
-
-      if (!self.exists(id) && cb) {
-        cb(new errors.RedisStoreError("Document does not exist."));
-        return false;
-      }
-
-      var doc = {
-        "id": id,
-        "meta": meta
-      };
-
-      documents.set(id, doc);
-      if (cb) cb(null, doc);
-
-      return true;
     };
 
     // Get document info (no contents)
@@ -374,7 +374,7 @@
       if (cb) cb(null);
     };
 
-    this.update_new = function(id, options, cb) {
+    this.update = function(id, options, cb) {
       // TODO: remove this legacy dispatcher as soon we are stable again
       var success = true;
 
@@ -393,7 +393,7 @@
         success = updateCommits(id, options.commits, errCb);
       }
       if(success && options.meta) {
-        success = self.updateMeta(id, options.meta, errCb);
+        success = updateMeta(id, options.meta, errCb);
       }
       if(success && options.refs) {
         success = self.setRefs(id, options.refs, errCb);
@@ -403,18 +403,6 @@
       return success;
 
     }
-
-    // TODO: remove this legacy dispatcher as soon as we are stable again
-    this.update = function(id, newCommits, cb_or_meta, refs, cb) {
-      var meta = arguments.length < 4 ? null : cb_or_meta;
-      var cb = arguments.length < 4 ? cb_or_meta : cb;
-      var options = {
-        commits: newCommits,
-        meta: meta,
-        refs: refs
-      };
-      return this.update_new(id, options, cb);
-    };
 
     this.setRefs = function(id, branch_or_refs, refs_or_cb, cb) {
       var references = self.redis.asHash(id + ":refs");

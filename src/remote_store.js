@@ -57,8 +57,8 @@
     // -------
 
     // TODO: update original API so they also take meta and refs
-    this.update = function(id, newCommits, meta, refs, cb) {
-      this.client.updateDocument(id, newCommits, meta, refs, cb);
+    this.update = function(id, options, cb) {
+      this.client.updateDocument(id, options, cb);
     };
   };
 
