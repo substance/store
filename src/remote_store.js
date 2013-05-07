@@ -61,6 +61,13 @@
       this.client.updateDocument(id, options, cb);
     };
 
+    this.getRefs = function(id, branch, cb) {
+      that.client.getDocumentInfo(id, function(err, doc) {
+        if (err) return cb(err);
+        cb(null, doc.refs[branch]);
+      });
+    }
+
     this.createBlob = function(docId, blobId, data, cb) {
       return this.client.createBlob(docId, blobId, data, cb);
     }
