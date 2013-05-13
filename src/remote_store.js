@@ -10,8 +10,8 @@
     // Create a new document
     // -------
 
-    this.create = function(id, cb) {
-      this.client.createDocument(id, cb);
+    this.create = function(id, options, cb) {
+      this.client.createDocument(id, options, cb);
     };
 
     // Get document by id
