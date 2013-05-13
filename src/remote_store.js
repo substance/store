@@ -17,6 +17,10 @@
     // Get document by id
     // -------
 
+    this.getInfo = function(id, cb) {
+      this.client.getDocumentInfo(id, cb);
+    };
+
     this.get = function(id, cb) {
       this.client.getDocument(id, cb);
     };
@@ -49,8 +53,8 @@
     // Retrieves a range of the document's commits
     // -------
 
-    this.commits = function(id, head, stop, cb) {
-      this.client.documentCommits(id, head, stop, cb);
+    this.commits = function(id, last, since, cb) {
+      this.client.documentCommits(id, last, since, cb);
     };
 
     // Stores a sequence of commits for a given document id.
