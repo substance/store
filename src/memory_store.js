@@ -39,9 +39,9 @@
     }
 
     proto.__delete__ = function (id) {
-      documents.delete(id);
-      commits.delete(id);
-      blobs.delete(id);
+      delete documents[id];
+      delete commits[id];
+      delete blobs[id];
     }
 
     proto.__deletedDocuments__ = function () {

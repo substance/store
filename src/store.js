@@ -493,7 +493,7 @@
       return Object.keys(obj);
     };
     this.delete = function(key) {
-      obj.delete(key);
+      delete obj[key];
     }
   };
   Store.Hash = Hash;
