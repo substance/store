@@ -481,7 +481,7 @@
   // used by the store.
   // --------
 
-  var Hash = function(obj) {
+  Store.Hash = function(obj) {
     if(!obj) throw "Illegal argument";
 
     this.obj = obj;
@@ -503,7 +503,6 @@
       delete obj[key];
     }
   };
-  Store.Hash = Hash;
 
   // Exports
   if (typeof exports !== 'undefined') {

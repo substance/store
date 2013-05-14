@@ -80,7 +80,6 @@
   if (typeof exports !== 'undefined') {
     exports.MemoryStore = MemoryStore;
   } else {
-    root.MemoryStore = MemoryStore;
     root.Substance.MemoryStore = MemoryStore;
   }
 
