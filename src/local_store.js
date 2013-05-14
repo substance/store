@@ -15,15 +15,16 @@
     var _ = root._;
   }
 
-  var LocalStore = function(settings) {
-    var scope = settings.scope || "";
+  var LocalStore = function(scope) {
+    scope = scope || "";
+    console.log("LocalStore: scope", scope);
 
     Store.call(this);
     var proto = util.prototype(this);
 
-    function key(id) {
+    function __key__(id) {
        return scope+":documents:"+id;
-    }
+    };
 
     function __documents__() {
       return new LocalStore.Hash(scope+":documents");
@@ -54,28 +55,35 @@
     }
 
     proto.__meta__ = function (id) {
-      return new LocalStore.Hash(key(id)+":meta");
+      return new LocalStore.Hash(__key__(id)+":meta");
     }
 
     proto.__refs__ = function (id, branch) {
-      return new LocalStore.Hash(key(id)+":refs");
+      return new LocalStore.Hash(__key__(id)+":refs");
     }
 
     proto.__commits__ = function (id) {
-      return new LocalStore.Hash(key(id)+":commits");
+      return new LocalStore.Hash(__key__(id)+":commits");
     }
 
     proto.__blobs__ = function(id) {
-      return new LocalStore.Hash(key(id)+":blobs");
+      return new LocalStore.Hash(__key__(id)+":blobs");
     }
 
     proto.__clear__ = function() {
-      var ids = this.__list__();
-      var self = this;
-      _.each(ids, function(id) {
-        self.__delete__(id);
-      });
-      this.__deletedDocuments__().delete();
+      var keys = [];
+      var idx = 0;
+      var key;
+      while(key = localStorage.key(idx++)) {
+        //console.log("Is prefix?", scope, key, key.indexOf(scope));
+        if (key.indexOf(scope) === 0) {
+          keys.push(key);
+        }
+      }
+      _.each(keys, function(key) {
+        console.log("Clearing", key);
+        localStorage.removeItem(key);
+      })
     }
   };
 
