@@ -396,74 +396,81 @@
 
 
     // Abstract methods that must be implemented by sub-classes
+    // ========
 
-    // Provides a list of ids
+    // Provides a list of document ids
     // --------
-
+    //
     proto.__list__ = function () {
       throw "Called abstract method."
     }
 
-    // Initializes all data structures for a new document
+    // Initializes data structures for a new document
     // --------
-
+    //
     proto.__init__ = function (docId) {
       throw "Called abstract method."
     }
 
-    // Initializes all data structures for a new document
+    // Removes all data of a document
     // --------
-
+    //
     proto.__delete__ = function (docId) {
       throw "Called abstract method."
     }
 
-    // Provides a Hash type that is used to store deleted documents (= trash bin)
+    // Provides a Hash to store deleted documents (= trash bin)
     // --------
-
+    //
     proto.__deletedDocuments__ = function () {
       throw "Called abstract method.";
     }
 
     // Checks if a document exists
     // --------
-
+    //
     proto.__exists__ = function (docId) {
       throw "Called abstract method."
     }
 
-    // Provides a Hash type object that contains the meta information of a document.
+    // Provides a Hash to store meta information of a document.
     // --------
-
+    //
     proto.__meta__ = function (docId) {
       throw "Called abstract method."
     }
 
-    // Provides a Hash type object that contains the references.
+    // Provides a Hash to store references of a document.
     // --------
-    // branch is optional
-
-    proto.__refs__ = function (docId, branch) {
+    // The hash should contain references ordered by branch:
+    //      {
+    //        "master": {
+    //          "head": <commit-sha>,
+    //          "last": <commit-sha>
+    //        }
+    //      }
+    //
+    proto.__refs__ = function (docId) {
       throw "Called abstract method.";
     }
 
-    // Provides a Hash type that contains all documents commits accessable via commit sha
+    // Provides a Hash to store commits via commit sha.
     // --------
-
+    //
     proto.__commits__ = function (docId) {
       throw "Called abstract method.";
     }
 
-    // Provides a Hash type that contains stored blobs accessible via blob id.
+    // Provides a Hash to store blobs via blob id.
     // --------
-
+    //
     proto.__blobs__ = function(docId) {
       throw "Called abstract method.";
     }
 
     // Clears the whole store
     // --------
-
+    //
     proto.__clear__ = function() {
       throw "Called abstract method.";
     }
