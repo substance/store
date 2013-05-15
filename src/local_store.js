@@ -17,66 +17,17 @@
 
   var LocalStore = function(scope) {
     scope = scope || "";
-    console.log("LocalStore: scope", scope);
 
     Store.call(this);
     var proto = util.prototype(this);
 
-    function __key__(id) {
-       return scope+":documents:"+id;
-    };
-
-    function __documents__() {
-      return new LocalStore.Hash(scope+":documents");
-    }
-
-    proto.__list__ = function () {
-      return __documents__().keys();
-    }
-
-    proto.__init__ = function (id) {
-      __documents__().set(id, true);
-    }
-
-    proto.__delete__ = function (id) {
-      __documents__().delete(id);
-      this.__meta__(id).delete();
-      this.__refs__(id).delete();
-      this.__commits__(id).delete();
-      this.__blobs__(id).delete();
-    }
-
-    proto.__deletedDocuments__ = function () {
-      return new LocalStore.Hash(scope+":trashbin");
-    }
-
-    proto.__exists__ = function (id) {
-      return __documents__().contains(id);
-    }
-
-    proto.__meta__ = function (id) {
-      return new LocalStore.Hash(__key__(id)+":meta");
-    }
-
-    proto.__refs__ = function (id, branch) {
-      return new LocalStore.Hash(__key__(id)+":refs");
-    }
-
-    proto.__commits__ = function (id) {
-      return new LocalStore.Hash(__key__(id)+":commits");
-    }
-
-    proto.__blobs__ = function(id) {
-      return new LocalStore.Hash(__key__(id)+":blobs");
-    }
-
-    proto.__clear__ = function() {
+    function clear(prefix) {
       var keys = [];
       var idx = 0;
       var key;
       while(key = localStorage.key(idx++)) {
         //console.log("Is prefix?", scope, key, key.indexOf(scope));
-        if (key.indexOf(scope) === 0) {
+        if (key.indexOf(prefix) === 0) {
           keys.push(key);
         }
       }
@@ -85,58 +36,43 @@
         localStorage.removeItem(key);
       })
     }
+
+    proto.__hash__ = function(path) {
+      var key = scope+":"+path.join(":");
+      return new LocalStore.Hash(key);
+    }
+
+    proto.__delete__ = function (id) {
+      // TODO: maybe could improve, as the actual structure is not defined here
+      clear(scope+":document:"+id);
+    }
+
+    proto.__clear__ = function() {
+      clear(scope);
+    }
   };
 
   LocalStore.Hash = function(scope) {
 
-    var KEYS = scope+":__keys__";
+    var proto = util.prototype(this);
+    Store.AbstractHash.call(this);
 
-    this.contains = function(key) {
-      return localStorage.hasOwnProperty(scope+":"+key);
-    };
-
-    this.get = function(key) {
-      if (arguments.length == 0) {
-        var keys = this.keys();
-        var result = {};
-        var self = this;
-        _.each(keys, function(key) {
-          result[key] = self.get(key);
-        });
-        return result;
-      }
-      return JSON.parse(localStorage.getItem(scope+":"+key));
-    };
-
-    this.set = function(key, value) {
-      localStorage.setItem(scope+":"+key, JSON.stringify(value));
-      var keys = this.keys();
-      if (keys.indexOf(key) < 0) keys.push(key);
-      localStorage.setItem(KEYS, JSON.stringify(keys));
-    };
-
-    this.keys = function() {
-      return JSON.parse(localStorage.getItem(KEYS));
-    };
-
-    this.delete = function(key) {
-      if(arguments.length == 0) {
-        var keys = this.keys();
-        var self = this;
-        _.each(keys, function(key) {
-          self.delete(key);
-        })
-        localStorage.removeItem(KEYS);
-        return;
-      }
-
-      localStorage.removeItem(scope+":"+key);
-      var keys = _.without(this.keys(), key);
-      localStorage.setItem(KEYS, JSON.stringify(keys));
+    function scoped(key) {
+      return scope+":"+key;
     }
 
-    var keys = this.keys();
-    if (!keys) localStorage.setItem(KEYS, "[]");
+    proto.contains = function(key) {
+      return localStorage.hasOwnProperty(scoped(key));
+    };
+
+    this.__get__ = function(key) {
+      return JSON.parse(localStorage.getItem(scoped(key)));
+    };
+
+    this.__set__ = function(key, value) {
+      if (value === undefined) localStorage.removeItem(scoped(key));
+      else localStorage.setItem(scoped(key), JSON.stringify(value));
+    };
   };
 
   // only add this when localStorage is available

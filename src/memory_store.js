@@ -20,61 +20,48 @@
     Store.call(this);
     var proto = util.prototype(this);
 
-    var documents = {};
-    var commits = {};
-    var blobs = {};
-    var deletedDocuments = {}
+    this.content = {};
 
-    proto.__list__ = function () {
-      return Object.keys(documents);
-    }
-
-    proto.__init__ = function (id) {
-      documents[id] = {
-        meta: {},
-        refs: {}
-      };
-      commits[id] = {};
-      blobs[id] = {};
+    proto.__hash__ = function() {
+      var obj = this.content;
+      _.each(arguments, function(scope) {
+        obj[scope] = obj[scope] || {};
+        obj = obj[scope];
+      });
+      return new MemoryStore.Hash(obj);
     }
 
     proto.__delete__ = function (id) {
-      delete documents[id];
-      delete commits[id];
-      delete blobs[id];
-    }
-
-    proto.__deletedDocuments__ = function () {
-      return new Store.Hash(deletedDocuments);
-    }
-
-    proto.__exists__ = function (id) {
-      return !!documents[id];
-    }
-
-    proto.__meta__ = function (id) {
-      return new Store.Hash(documents[id].meta);
-    }
-
-    proto.__refs__ = function (id, branch) {
-      return new Store.Hash(documents[id].refs);
-    }
-
-    proto.__commits__ = function (id) {
-      return new Store.Hash(commits[id]);
-    }
-
-    proto.__blobs__ = function(id) {
-      return new Store.Hash(blobs[id]);
+      // TODO: maybe could improve, as the actual structure is not defined here
+      delete this.content.document.id;
     }
 
     proto.__clear__ = function() {
-      documents = {};
-      deletedDocuments = {};
-      commits = {};
-      blobs = {};
+      this.content = {};
     }
   };
+
+  MemoryStore.Hash = function(obj) {
+    if (!obj) throw new Error("Illegal argument.");
+
+    this.obj = obj;
+
+    var proto = util.prototype(this);
+    Store.AbstractHash.call(proto);
+
+    proto.contains = function(key) {
+      return !!this.obj[key];
+    }
+
+    proto.__get__ = function(key) {
+      return this.obj[key];
+    };
+
+    proto.__set__ = function(key, value) {
+      if (value === undefined) delete this.obj[key];
+      else this.obj[key] = value;
+    }
+  }
 
   // Exports
   if (typeof exports !== 'undefined') {

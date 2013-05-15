@@ -20,6 +20,16 @@
     var proto = util.prototype(this);
     var self = this;
 
+    // accessors for stored data
+    var __documents__ = function() { return self.__hash__(["documents"]); };
+    var __trash_bin__ = function() { return self.__hash__(["trashbin"]); };
+    var __meta__ = function(id) { return self.__hash__(["document", id, "meta"]); };
+    var __refs__ = function(id) { return self.__hash__(["document", id, "refs"]); };
+    var __commits__ = function(id) { return self.__hash__(["document", id, "commits"]); };
+    var __blobs__ = function(id) { return self.__hash__(["document", id, "blobs"]); };
+    var __remotes__ = function() { return self.__hash__(["remotes"]); };
+    var __changes__ = function(id) { return self.__hash__(["changes", id]); };
+
     // Retrieves a chain of commits from the given list list of commits
     function getCommitChain(commit, commits) {
       var result = [commit];
@@ -53,7 +63,7 @@
     function updateCommits(id, newCommits) {
       if (!newCommits || newCommits.length == 0) return true;
 
-      var commits = self.__commits__(id);
+      var commits = __commits__(id);
       newCommits = commitsAsHash(newCommits);
 
       var pending = {};
@@ -86,7 +96,7 @@
 
     function updateMeta(id, meta) {
       if (!meta || meta.length == 0) return true;
-      var _meta = self.__meta__(id);
+      var _meta = __meta__(id);
       _.each(meta, function(val, key) {
         _meta.set(key, val);
       })
@@ -107,7 +117,7 @@
 
       if (!refs || refs.length == 0) return true;
 
-      var _refs = self.__refs__(id);
+      var _refs = __refs__(id);
       var newRefs = _refs.get(branch) || {};
       _.extend(newRefs, refs);
       _refs.set(branch, newRefs);
@@ -126,7 +136,7 @@
 
         self.create(id)
 
-        // console.log('LE COMMITS MISSIEU', commits);
+        // console.log('LE commits MISSIEU', commits);
         var options = {
           meta: doc.meta,
           refs: doc.refs
@@ -144,14 +154,14 @@
       data.commits = self.commits(id);
       data.blobs = {};
 
-      var ids = self.__list__();
+      var ids = __documents__().keys();
       _.each(ids, function(id) {
-        var blobs = self.__blobs__(id);
+        var blobs = __blobs__(id);
         _.each(blobs.keys(), function(blobId) {
           data.blobs[blobId] = blobs.get(blobId);
         });
       });
-      self.__deletedDocuments__().set(id, data);
+      __trash_bin__().set(id, data);
     }
 
     // Public Interface
@@ -161,7 +171,7 @@
     // --------
 
     proto.exists = function (id) {
-      return this.__exists__(id);
+      return __documents__().contains(id);
     };
 
     // Creates a new document with the provided id
@@ -172,16 +182,17 @@
 
       if(this.exists(id)) throw new errors.StoreError("Document already exists.");
 
-      this.__init__(id);
+      // TODO: maybe we want to store more store specific bookkeeping information
+      __documents__(id).set(id, true);
 
-      var meta = _.extend({
-          "created_at": new Date(),
-          "updated_at": new Date()
-        }, options.meta);
+      var meta = {
+        "created_at": new Date(),
+        "updated_at": new Date()
+      };
+      meta = _.extend(meta, options.meta);
       updateMeta(id, meta);
 
       if (options.refs) updateRefs(id, options.refs);
-
       if (options.commits) updateCommits(id, options.commits);
 
       return this.getInfo(id);
@@ -195,7 +206,7 @@
       if(!this.exists(id)) throw new errors.StoreError("Document does not exists.");
 
       var doc = {id: id};
-      doc.meta = this.__meta__(id).get();
+      doc.meta = __meta__(id).dump();
       doc.refs = this.getRefs(id);
 
       return doc;
@@ -207,7 +218,7 @@
     proto.list = function () {
       var docs = [];
 
-      _.each(this.__list__(), function(id){
+      _.each(__documents__().keys(), function(id){
         var doc = self.getInfo(id);
         docs.push(doc);
       });
@@ -228,7 +239,7 @@
       if(!this.exists(id)) throw new errors.StoreError("Document does not exists.");
 
       var doc = this.getInfo(id);
-      doc.commits = this.__commits__(id).get();
+      doc.commits = __commits__(id).dump();
 
       return doc;
     };
@@ -240,11 +251,11 @@
       var result = [];
       console.log("store.commits", id, last, since);
 
-      var commits = this.__commits__(id);
+      var commits = __commits__(id);
 
       // if no range is specified return all commits
       if (arguments.length == 1 || (last === undefined && since === undefined)) {
-        var all = commits.get();
+        var all = commits.dump();
         _.each(all, function(commit) {
           result.push(commit);
         });
@@ -281,6 +292,11 @@
 
     proto.delete = function (id) {
       copyToTrash(id);
+      __documents__().delete(id);
+      __meta__(id).clear();
+      __refs__(id).clear();
+      __commits__(id).clear();
+      __blobs__(id).clear();
       this.__delete__(id);
       return true;
     };
@@ -300,7 +316,7 @@
     }
 
     proto.getRefs = function(id, branch) {
-      var refs = this.__refs__(id).get();
+      var refs = __refs__(id).dump();
       if (branch) return refs[branch];
       else return refs;
     };
@@ -311,11 +327,11 @@
     };
 
     proto.deletedDocuments = function() {
-      return this.__deletedDocuments__().keys();
+      return __trash_bin__().keys();
     };
 
     proto.confirmDeletion = function(id) {
-      this.__deletedDocuments__().delete(id);
+      // do not physically delete for now
       return true;
     };
 
@@ -328,14 +344,14 @@
     proto.dump = function() {
       var docs = {};
 
-      var docIds = this.__list__();
+      var docIds = this.list();
       _.each(docIds, function(id) {
         docs[id] = this.get(id);
       });
 
       var dump = {
         'documents': docs,
-        'deleted-documents': this.__deletedDocuments__().get()
+        'deleted-documents': __trash_bin__().dump()
       };
 
       return dump;
@@ -345,7 +361,7 @@
     // --------
 
     proto.createBlob = function(docId, blobId, base64data) {
-      var blobs = this.__blobs__(docId);
+      var blobs = __blobs__(docId);
 
       if (blobs.contains(blobId)) throw new errors.StoreError("Blob already exists.");
 
@@ -363,7 +379,7 @@
     // --------
 
     proto.getBlob = function(docId, blobId) {
-      var blobs = this.__blobs__(docId);
+      var blobs = __blobs__(docId);
       if (!blobs.contains(blobId)) throw new errors.StoreError("Blob not found.");
       return blobs.get(blobId);
     };
@@ -372,7 +388,7 @@
     // --------
 
     proto.blobExists = function (docId, blobId) {
-      var blobs = this.__blobs__(docId);
+      var blobs = __blobs__(docId);
       return blobs.contains(blobId);
     };
 
@@ -380,7 +396,7 @@
     // --------
 
     proto.deleteBlob = function(docId, blobId) {
-      var blobs = this.__blobs__(docId);
+      var blobs = __blobs__(docId);
       blobs.delete(id);
       return true;
     };
@@ -389,83 +405,57 @@
     // --------
 
     proto.listBlobs = function(docId) {
-      var blobs = this.__blobs__(docId);
+      var blobs = __blobs__(docId);
       var docIds = blobs.keys();
       return docIds;
     };
 
 
-    // Abstract methods that must be implemented by sub-classes
+    // Store managment API
     // ========
-
-    // Provides a list of document ids
-    // --------
     //
-    proto.__list__ = function () {
-      throw "Called abstract method."
+
+    proto.addRemote = function(id, options) {
+      var remotes = __remotes__();
+      if (remotes.contains(id)) {
+        throw new errors.StoreError("Remote store "+id+" has already been registered.");
+      }
+      remotes.set(id, options);
     }
 
-    // Initializes data structures for a new document
-    // --------
-    //
-    proto.__init__ = function (docId) {
-      throw "Called abstract method."
+    proto.updateRemote = function(id, options) {
+      var remotes = __remotes__();
+      if (!remotes.contains(id)) {
+        throw new errors.StoreError("Unknow remote store "+id);
+      }
+      options = _.extend(remotes.get(id), options);
+      remotes.set(id, options);
     }
 
-    // Removes all data of a document
+    proto.getChanges = function(remoteId, trackId) {
+      /*
+      var remotes = __remotes__();
+      if (!remotes.contains(id)) {
+        throw new errors.StoreError("Unknow remote store "+id);
+      }
+      var remote = remotes.get(remoteId);
+      var last = remote.[trackId];
+      if (!last) {
+        // TODO: the track has not yet been synchronized
+      }
+
+      */
+    }
+
+    proto.__hash__ = function(path) {
+      throw "Called abstract method.";
+    }
+
+     // Removes all data of a document
     // --------
     //
     proto.__delete__ = function (docId) {
       throw "Called abstract method."
-    }
-
-    // Provides a Hash to store deleted documents (= trash bin)
-    // --------
-    //
-    proto.__deletedDocuments__ = function () {
-      throw "Called abstract method.";
-    }
-
-    // Checks if a document exists
-    // --------
-    //
-    proto.__exists__ = function (docId) {
-      throw "Called abstract method."
-    }
-
-    // Provides a Hash to store meta information of a document.
-    // --------
-    //
-    proto.__meta__ = function (docId) {
-      throw "Called abstract method."
-    }
-
-    // Provides a Hash to store references of a document.
-    // --------
-    // The hash should contain references ordered by branch:
-    //      {
-    //        "master": {
-    //          "head": <commit-sha>,
-    //          "last": <commit-sha>
-    //        }
-    //      }
-    //
-    proto.__refs__ = function (docId) {
-      throw "Called abstract method.";
-    }
-
-    // Provides a Hash to store commits via commit sha.
-    // --------
-    //
-    proto.__commits__ = function (docId) {
-      throw "Called abstract method.";
-    }
-
-    // Provides a Hash to store blobs via blob id.
-    // --------
-    //
-    proto.__blobs__ = function(docId) {
-      throw "Called abstract method.";
     }
 
     // Clears the whole store
@@ -475,33 +465,91 @@
       throw "Called abstract method.";
     }
 
+
   };
 
   // A helper class to adapt a javascript object to a unified hash interface
   // used by the store.
   // --------
+  // Note: the hash keeps the keys in order of changes. I.e., the last changed key will be last of keys()
 
-  Store.Hash = function(obj) {
-    if(!obj) throw "Illegal argument";
+  // An abstract hash implementation that can be used to adapt data structures
+  // to the Store.Hash interface easily.
+  // --------
+  //
+  Store.AbstractHash = function() {
 
-    this.obj = obj;
+    var proto = util.prototype(this);
 
-    this.contains = function(key) {
-      return (!!obj[key]);
+    proto.contains = function(key) {
+      var keys = this.keys();
+      if (!keys) return false;
+      else return keys.indexOf(key) >= 0;
     };
-    this.get = function(key) {
-      if (arguments.length == 0) return obj;
-      return obj[key];
+
+    proto.keys = function() {
+      var keys = this.__get__("__keys__");
+      if (!keys) {
+        this.__set__("__keys__", []);
+        keys = [];
+      }
+      if (keys.indexOf(null) >= 0) {
+        console.log("AAAAAAA", util.callstack());
+      }
+      return keys;
     };
-    this.set = function(key, value) {
-      obj[key] = value;
+
+    proto.get = function(key) {
+      if(!this.contains(key)) {
+        //throw new errors.StoreError("Unknown key:"+key);
+        return undefined;
+      }
+      return this.__get__(key);
     };
-    this.keys = function() {
-      return Object.keys(obj);
+
+    proto.set = function(key, value) {
+      if (!key) throw new errors.StoreError("Illegal key:"+key);
+      var keys = _.without(this.keys(), key);
+      keys.push(key);
+      this.__set__("__keys__", keys);
+      this.__set__(key, value);
     };
-    this.delete = function(key) {
-      delete obj[key];
-    }
+
+    proto.delete = function(key) {
+      var keys = _.without(this.keys(), key);
+      this.__set__("__keys__", keys);
+      this.__set__(key, undefined);
+    };
+
+    proto.clear = function() {
+      var keys = this.keys();
+      var self = this;
+      _.each(keys, function(key) {
+        self.delete(key);
+      });
+      self.__set__("__keys__", []);
+    };
+
+    proto.dump = function() {
+      var keys = this.keys();
+      var self = this;
+      var result = {};
+      _.each(keys, function(key) {
+        result[key] = self.__get__(key);
+      });
+      return result;
+    };
+
+    // Trivial getter
+    proto.__get__ = function(key) {
+      throw new Error("Not implemented");
+    };
+
+    // Trivial setter
+    proto.__set__ = function(key, value) {
+      throw new Error("Not implemented");
+    };
+
   };
 
   // Exports

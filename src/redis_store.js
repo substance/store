@@ -6,47 +6,15 @@
   // Native extension
   if (typeof exports !== 'undefined') {
     var util = require('../../util/util');
-    var errors = require('../../util/errors');
     var Store = require('./store').Store;
     var _ = require('underscore');
     var redis = require('../lib/redis');
   } else {
     var util = root.Substance.util;
-    var errors = root.Substance.errors;
     var Store = root.Substance.Store;
     var _ = root._;
     var redis = root.redis;
   }
-
-  var Hash = function(hash) {
-
-    this.contains = function(key) {
-      return hash.contains(key);
-    };
-
-    this.get = function(key) {
-      if (arguments.length == 0) {
-        var result = {};
-        _.each(hash.getKeys(), function(key) {
-          result[key] = hash.getJSON(key);
-        });
-        return result;
-      }
-      return hash.getJSON(key);
-    };
-
-    this.set = function(key, value) {
-      hash.set(key, value);
-    };
-
-    this.keys = function() {
-      return hash.getKeys();
-    };
-
-    this.delete = function(key) {
-      hash.remove(key);
-    };
-  };
 
   var RedisStore = function(settings) {
 
@@ -76,54 +44,46 @@
     __redis__.setScope(settings.scope);
     __redis__.connect();
 
-    var documents = __redis__.asHash("documents");
-    var deletedDocuments = __redis__.asHash("deleted-documents");
-
-    proto.__list__ = function () {
-      return documents.getKeys();;
-    }
-
-    proto.__init__ = function (id) {
-      var doc = {
-        meta: {},
-        refs: {}
-      };
-      documents.set(id, doc);
+    proto.__hash__ = function(path) {
+      var key = path.join(":");
+      return new RedisStore.Hash(__redis__, key);
     }
 
     proto.__delete__ = function (id) {
-      documents.remove(id);
-      __redis__.removeWithPrefix("documents:"+id);
-    }
-
-    proto.__deletedDocuments__ = function () {
-      return new Hash(deletedDocuments);
-    }
-
-    proto.__exists__ = function (id) {
-      return documents.contains(id);
-    }
-
-    proto.__meta__ = function (id) {
-      return new Hash(__redis__.asHash("documents:"+id+":meta"));
-    }
-
-    proto.__refs__ = function (id) {
-      var hash = __redis__.asHash("documents:"+id+":refs");
-      return new Hash(hash);
-    }
-
-    proto.__commits__ = function (id) {
-      return new Hash(__redis__.asHash("documents:"+id+":commits"));
-    }
-
-    proto.__blobs__ = function(id) {
-      return new Hash(__redis__.asHash("documents:"+id+":blobs"));
+      // TODO: maybe could improve, as the actual structure is not defined here
+      __redis__.removeWithPrefix("document:"+id);
     }
 
     proto.__clear__ = function() {
       __redis__.removeWithPrefix("");
     }
+  };
+
+  RedisStore.Hash = function(__redis__, scope) {
+
+    var proto = util.prototype(this);
+    Store.AbstractHash.apply(this);
+
+    function scoped(key) {
+      return scope+":"+key;
+    }
+
+    // efficient implementation
+    proto.contains = function(key) {
+      return __redis__.exists(scoped(key));
+    }
+
+    proto.__get__ = function(key) {
+      return __redis__.getJSON(scoped(key));
+    };
+
+    proto.__set__ = function(key, value) {
+      if (value === undefined) {
+        __redis__.remove(scoped(key));
+      } else {
+        __redis__.set(scoped(key), value);
+      }
+    };
   };
 
   // Exports
