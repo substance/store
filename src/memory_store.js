@@ -22,9 +22,10 @@
 
     this.content = {};
 
-    proto.__hash__ = function() {
+    proto.__hash__ = function(type, id) {
+      path = id ? ["document", id, type] : [type]
       var obj = this.content;
-      _.each(arguments, function(scope) {
+      _.each(path, function(scope) {
         obj[scope] = obj[scope] || {};
         obj = obj[scope];
       });

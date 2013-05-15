@@ -44,8 +44,9 @@
     __redis__.setScope(settings.scope);
     __redis__.connect();
 
-    proto.__hash__ = function(path) {
-      var key = path.join(":");
+    proto.__hash__ = function(type, id) {
+      var key = type;
+      if (id) key = key+":"+id;
       return new RedisStore.Hash(__redis__, key);
     }
 

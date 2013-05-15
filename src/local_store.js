@@ -32,13 +32,14 @@
         }
       }
       _.each(keys, function(key) {
-        console.log("Clearing", key);
+//        console.log("Clearing", key);
         localStorage.removeItem(key);
       })
     }
 
-    proto.__hash__ = function(path) {
-      var key = scope+":"+path.join(":");
+    proto.__hash__ = function(type, id) {
+      path = id ? [scope, "document", id, type] : [scope, type]
+      var key = path.join(":");
       return new LocalStore.Hash(key);
     }
 
@@ -57,21 +58,26 @@
     var proto = util.prototype(this);
     Store.AbstractHash.call(this);
 
-    function scoped(key) {
+    var self = this;
+
+    this.scoped = function(key) {
       return scope+":"+key;
     }
 
     proto.contains = function(key) {
-      return localStorage.hasOwnProperty(scoped(key));
+      key = this.scoped(key);
+      return localStorage.hasOwnProperty(key);
     };
 
     this.__get__ = function(key) {
-      return JSON.parse(localStorage.getItem(scoped(key)));
+      key = this.scoped(key);
+      return JSON.parse(localStorage.getItem(key));
     };
 
     this.__set__ = function(key, value) {
-      if (value === undefined) localStorage.removeItem(scoped(key));
-      else localStorage.setItem(scoped(key), JSON.stringify(value));
+      key = this.scoped(key);
+      if (value === undefined) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(value));
     };
   };
 

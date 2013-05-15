@@ -20,15 +20,51 @@
     var proto = util.prototype(this);
     var self = this;
 
-    // accessors for stored data
-    var __documents__ = function() { return self.__hash__(["documents"]); };
-    var __trash_bin__ = function() { return self.__hash__(["trashbin"]); };
-    var __meta__ = function(id) { return self.__hash__(["document", id, "meta"]); };
-    var __refs__ = function(id) { return self.__hash__(["document", id, "refs"]); };
-    var __commits__ = function(id) { return self.__hash__(["document", id, "commits"]); };
-    var __blobs__ = function(id) { return self.__hash__(["document", id, "blobs"]); };
-    var __remotes__ = function() { return self.__hash__(["remotes"]); };
-    var __changes__ = function(id) { return self.__hash__(["changes", id]); };
+    // data stores for document data
+    var __documents__ = function() { return self.__hash__("documents"); };
+    var __trash_bin__ = function() { return self.__hash__("trashbin"); };
+    var __meta__ = function(id) { return self.__hash__("meta", id); };
+    var __refs__ = function(id) { return self.__hash__("refs", id); };
+    var __commits__ = function(id) { return self.__hash__("commits", id); };
+    var __blobs__ = function(id) { return self.__hash__("blobs", id); };
+
+    // data structures to record store changes
+    var __remotes__ = function() { return self.__hash__("remotes"); };
+    var __tracks__ = function(id) { return self.__hash__("tracks", id); };
+    var __changes__ = function(id) { return self.__hash__("changes", id); };
+
+    function recordStoreCommand(cmd, id, options) {
+      var track = __tracks__('__store__');
+      var changes = __changes__("__store__");
+      var cid = util.uuid();
+
+      var options = options || null;
+      var parent = track.get('__self__') || null;
+      var cmd = [cmd, id, options, parent];
+
+      track.set("__self__", cid);
+      changes.set(cid, cmd);
+    }
+
+    function recordUpdate(id, type, data) {
+      var track = __tracks__(id);
+      var changes = __changes__(id);
+      var parent = track.get('__self__') || null;
+      var cid = util.uuid();
+
+      var cmd;
+      var options = {};
+      if (type == "commits") {
+        var ids = Object.keys(data);
+        options[type] = ids;
+      } else {
+        options[type] = data;
+      }
+      cmd = ["update", id, options, parent];
+
+      changes.set(cid, cmd);
+      track.set("__self__", cid);
+    }
 
     // Retrieves a chain of commits from the given list list of commits
     function getCommitChain(commit, commits) {
@@ -91,6 +127,8 @@
         commits.set(sha, commit);
       });
 
+      recordUpdate(id, "commits", newCommits);
+
       return true;
     };
 
@@ -100,27 +138,21 @@
       _.each(meta, function(val, key) {
         _meta.set(key, val);
       })
+
+      recordUpdate(id, "meta", meta);
+
       return true;
     };
 
-    function updateRefs(id, branch, refs) {
-      // if no branch is given, it is assumed that
-      // branch contains refs by branch.
-      if (arguments.length == 2 || !branch) {
-        var branches = branch;
-        branch = null;
-        _.each(branches, function(refs, branch) {
-          updateRefs(id, branch, refs);
-        });
-        return true;
-      }
-
-      if (!refs || refs.length == 0) return true;
-
+    function updateRefs(id, refs) {
       var _refs = __refs__(id);
-      var newRefs = _refs.get(branch) || {};
-      _.extend(newRefs, refs);
-      _refs.set(branch, newRefs);
+      _.each(refs, function(refs, branch) {
+        var newRefs = _refs.get(branch) || {};
+        _.extend(newRefs, refs);
+        _refs.set(branch, newRefs);
+      });
+
+      recordUpdate(id, "refs", refs);
 
       return true;
     };
@@ -184,6 +216,7 @@
 
       // TODO: maybe we want to store more store specific bookkeeping information
       __documents__(id).set(id, true);
+      recordStoreCommand("create", id, {"role": "creator"});
 
       var meta = {
         "created_at": new Date(),
@@ -249,7 +282,7 @@
 
     proto.commits = function(id, last, since) {
       var result = [];
-      console.log("store.commits", id, last, since);
+      //console.log("store.commits", id, last, since);
 
       var commits = __commits__(id);
 
@@ -259,18 +292,15 @@
         _.each(all, function(commit) {
           result.push(commit);
         });
-        console.log("store.commits: result", result);
         return result;
       }
       else if (last === since) {
-        console.log("store.commits: result", result);
         return result;
       }
 
       var commit = commits.get(last);
 
       if (!commit) {
-        console.log("store.commits: result", result);
         return result;
       }
 
@@ -283,7 +313,7 @@
         result.unshift(commit);
       }
 
-      console.log("store.commits: result", result);
+      //console.log("store.commits: result", result);
       return result;
     };
 
@@ -298,14 +328,10 @@
       __commits__(id).clear();
       __blobs__(id).clear();
       this.__delete__(id);
+
+      recordStoreCommand("delete", id)
+
       return true;
-    };
-
-    //  Permanently delete all documents at once
-    // --------
-
-    proto.clear = function() {
-      this.__clear__();
     };
 
     proto.update = function(id, options) {
@@ -322,7 +348,9 @@
     };
 
     proto.setRefs = function(id, branch, refs) {
-      updateRefs(id, branch, refs);
+      var options = {};
+      options.branch = refs;
+      updateRefs(id, options);
       return true;
     };
 
@@ -336,7 +364,7 @@
     };
 
     proto.seed = function(data) {
-      this.clear();
+      this.__clear__();
       importDump(data);
       return true;
     };
@@ -372,6 +400,9 @@
       };
 
       blobs.set(blobId, blob);
+
+      recordUpdate(docId, "blob", blobId);
+
       return blob;
     };
 
@@ -398,6 +429,9 @@
     proto.deleteBlob = function(docId, blobId) {
       var blobs = __blobs__(docId);
       blobs.delete(id);
+
+      recordUpdate(docId, "blob", undefined);
+
       return true;
     };
 
@@ -432,19 +466,39 @@
       remotes.set(id, options);
     }
 
-    proto.getChanges = function(remoteId, trackId) {
-      /*
-      var remotes = __remotes__();
-      if (!remotes.contains(id)) {
-        throw new errors.StoreError("Unknow remote store "+id);
-      }
-      var remote = remotes.get(remoteId);
-      var last = remote.[trackId];
-      if (!last) {
-        // TODO: the track has not yet been synchronized
+    proto.getChanges = function(id, start, since) {
+      var result = [];
+
+      if (start === since) return result;
+
+      var changes = __changes__(id);
+      var change;
+
+      var cid = start;
+      while(true) {
+        if (cid === null || cid === since) break;
+        result.push(change);
+
+        change = changes.get(cid);
+        if (!change) {
+          throw new Error("Illegal state: changes");
+        }
+        cid = change.parent;
       }
 
-      */
+      return result;
+    }
+
+    proto.getDiff = function(storeId, trackId) {
+      var stores = __stores__();
+      if (!stores.contains(id)) {
+        throw new errors.StoreError("Unknow remote store "+id);
+      }
+      var remote = stores.get(storeId);
+      var lastRemote = __tracks__(trackId).get(storeId);
+      var last = __tracks__(trackId).get('__self__');
+
+      return getChanges(trackId, last, lastRemote);
     }
 
     proto.__hash__ = function(path) {
@@ -494,7 +548,7 @@
         keys = [];
       }
       if (keys.indexOf(null) >= 0) {
-        console.log("AAAAAAA", util.callstack());
+        console.log(util.callstack());
       }
       return keys;
     };
