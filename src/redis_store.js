@@ -1,98 +1,99 @@
 
 (function(){
 
-  var root = this;
+var root = this;
 
-  // Native extension
-  if (typeof exports !== 'undefined') {
-    var util = require('../../util/util');
-    var Store = require('./store').Store;
-    var _ = require('underscore');
-    var redis = require('../lib/redis');
-  } else {
-    var util = root.Substance.util;
-    var Store = root.Substance.Store;
-    var _ = root._;
-    var redis = root.redis;
-  }
+// Native extension
+if (typeof exports !== 'undefined') {
+  var util = require('../../util/util');
+  var Store = require('./store').Store;
+  var _ = require('underscore');
+  var redis = require('../lib/redis');
+} else {
+  var util = root.Substance.util;
+  var Store = root.Substance.Store;
+  var _ = root._;
+  var redis = root.redis;
+}
 
-  var RedisStore = function(settings) {
+var RedisStore = function(settings) {
+  Store.call(this);
 
-    // Initialization
-    // --------
-    Store.call(this);
-    var proto = util.prototype(this);
+  var defaults = {
+    host: "127.0.0.1",
+    port: 6379,
+    scope: "substance"
+  };
+  var settings = _.extend(defaults, settings);
 
-    // reference to this for use within instance methods
-    var self = this;
+  this.__redis__ = redis.RedisAccess.Create(0);
+  this.__redis__.setHost(settings.host);
+  this.__redis__.setPort(settings.port);
 
-    var __redis__ = redis.RedisAccess.Create(0);
+  // the scope is useful to keep parts of the redis db separated
+  // e.g. tests would use its own, or one could separate user spaces
+  this.__redis__.setScope(settings.scope);
+  this.__redis__.connect();
 
-    var defaults = {
-      host: "127.0.0.1",
-      port: 6379,
-      scope: "substance"
-    };
+  this.__impl__ = new RedisStore.__impl__(this);
+}
 
-    var settings = _.extend(defaults, settings);
+RedisStore.__impl__ = function(self) {
 
-    __redis__.setHost(settings.host);
-    __redis__.setPort(settings.port);
-
-    // the scope is useful to keep parts of the redis db separated
-    // e.g. tests would use its own, or one could separate user spaces
-    __redis__.setScope(settings.scope);
-    __redis__.connect();
-
-    proto.__hash__ = function(type, id) {
-      var key = type;
-      if (id) key = key+":"+id;
-      return new RedisStore.Hash(__redis__, key);
-    }
-
-    proto.__delete__ = function (id) {
-      // TODO: maybe could improve, as the actual structure is not defined here
-      __redis__.removeWithPrefix("document:"+id);
-    }
-
-    proto.__clear__ = function() {
-      __redis__.removeWithPrefix("");
-    }
+  this.hash = function(type, id) {
+    var key = type;
+    if (id) key = key+":"+id;
+    return new RedisStore.Hash(self.__redis__, key);
   };
 
-  RedisStore.Hash = function(__redis__, scope) {
-
-    var proto = util.prototype(this);
-    Store.AbstractHash.apply(this);
-
-    function scoped(key) {
-      return scope+":"+key;
-    }
-
-    // efficient implementation
-    proto.contains = function(key) {
-      return __redis__.exists(scoped(key));
-    }
-
-    proto.__get__ = function(key) {
-      return __redis__.getJSON(scoped(key));
-    };
-
-    proto.__set__ = function(key, value) {
-      if (value === undefined) {
-        __redis__.remove(scoped(key));
-      } else {
-        __redis__.set(scoped(key), value);
-      }
-    };
+  this.delete = function (id) {
+    self.__redis__.removeWithPrefix("document:"+id);
   };
 
-  // Exports
-  if (typeof exports !== 'undefined') {
-    exports.RedisStore = RedisStore;
-  } else {
-    root.RedisStore = RedisStore;
-    root.Substance.RedisStore = RedisStore;
+  this.clear = function() {
+    self.__redis__.removeWithPrefix("");
+  };
+};
+
+RedisStore.prototype = new Store.__prototype__();
+
+RedisStore.Hash = function(__redis__, scope) {
+  this.__redis__ = __redis__;
+  this.scope = scope;
+};
+
+RedisStore.Hash.__prototype__ = function() {
+
+  this.scoped = function(key) {
+    return this.scope+":"+key;
   }
+
+  // efficient implementation
+  this.contains = function(key) {
+    return this.__redis__.exists(this.scoped(key));
+  }
+
+  this.__get__ = function(key) {
+    return this.__redis__.getJSON(this.scoped(key));
+  };
+
+  this.__set__ = function(key, value) {
+    if (value === undefined) {
+      this.__redis__.remove(this.scoped(key));
+    } else {
+      this.__redis__.set(this.scoped(key), value);
+    }
+  };
+};
+RedisStore.Hash.__prototype__.prototype = new Store.AbstractHash();
+RedisStore.Hash.prototype = new RedisStore.Hash.__prototype__();
+
+// Exports
+if (typeof exports !== 'undefined') {
+  exports.RedisStore = RedisStore;
+} else {
+  root.RedisStore = RedisStore;
+  root.Substance.RedisStore = RedisStore;
+}
 
 })(this);

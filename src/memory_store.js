@@ -1,74 +1,80 @@
 
 (function(){
 
-  var root = this;
+var root = this;
 
-  // Native extension
-  if (typeof exports !== 'undefined') {
-    var util = require('../../util/util');
-    var errors = require('../../util/errors');
-    var Store = require('./store').Store;
-    var _ = require('underscore');
-  } else {
-    var util = root.Substance.util;
-    var errors = root.Substance.errors;
-    var Store = root.Substance.Store;
-    var _ = root._;
-  }
+// Native extension
+if (typeof exports !== 'undefined') {
+  var util = require('../../util/util');
+  var errors = require('../../util/errors');
+  var Store = require('./store').Store;
+  var _ = require('underscore');
+} else {
+  var util = root.Substance.util;
+  var errors = root.Substance.errors;
+  var Store = root.Substance.Store;
+  var _ = root._;
+}
 
-  var MemoryStore = function() {
-    Store.call(this);
-    var proto = util.prototype(this);
+var MemoryStore = function() {
+  Store.call(this);
+  this.content = {};
 
-    this.content = {};
+  this.__impl__ = new MemoryStore.__impl__(this);
+}
 
-    proto.__hash__ = function(type, id) {
-      path = id ? ["document", id, type] : [type]
-      var obj = this.content;
-      _.each(path, function(scope) {
-        obj[scope] = obj[scope] || {};
-        obj = obj[scope];
-      });
-      return new MemoryStore.Hash(obj);
-    }
+MemoryStore.__impl__ = function(self) {
 
-    proto.__delete__ = function (id) {
-      // TODO: maybe could improve, as the actual structure is not defined here
-      delete this.content.document.id;
-    }
-
-    proto.__clear__ = function() {
-      this.content = {};
-    }
+  this.hash = function(type, id) {
+    var path = id ? ["document", id, type] : [type]
+    var obj = self.content;
+    _.each(path, function(scope) {
+      obj[scope] = obj[scope] || {};
+      obj = obj[scope];
+    });
+    return new MemoryStore.Hash(obj);
   };
 
-  MemoryStore.Hash = function(obj) {
-    if (!obj) throw new Error("Illegal argument.");
+  this.delete = function (id) {
+    // TODO: maybe could improve, as the actual structure is not defined here
+    delete self.content.document.id;
+  };
 
-    this.obj = obj;
+  this.clear = function() {
+    self.content = {};
+  };
 
-    var proto = util.prototype(this);
-    Store.AbstractHash.call(proto);
+};
 
-    proto.contains = function(key) {
-      return !!this.obj[key];
-    }
+MemoryStore.prototype = new Store.__prototype__();
 
-    proto.__get__ = function(key) {
-      return this.obj[key];
-    };
+MemoryStore.Hash = function(obj) {
+  if (!obj) throw new Error("Illegal argument.");
+  this.obj = obj;
+};
+MemoryStore.Hash.__prototype__ = function() {
 
-    proto.__set__ = function(key, value) {
-      if (value === undefined) delete this.obj[key];
-      else this.obj[key] = value;
-    }
+  this.contains = function(key) {
+    return !!this.obj[key];
   }
 
-  // Exports
-  if (typeof exports !== 'undefined') {
-    exports.MemoryStore = MemoryStore;
-  } else {
-    root.Substance.MemoryStore = MemoryStore;
+  this.__get__ = function(key) {
+    return this.obj[key];
+  };
+
+  this.__set__ = function(key, value) {
+    if (value === undefined) delete this.obj[key];
+    else this.obj[key] = value;
   }
+};
+MemoryStore.Hash.__prototype__.prototype = new Store.AbstractHash();
+MemoryStore.Hash.prototype = new MemoryStore.Hash.__prototype__();
+
+// Exports
+if (typeof exports !== 'undefined') {
+  exports.MemoryStore = MemoryStore;
+} else {
+  root.Substance.MemoryStore = MemoryStore;
+}
 
 })(this);
