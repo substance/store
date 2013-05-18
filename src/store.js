@@ -17,233 +17,18 @@ if (typeof exports !== 'undefined') {
 
 errors.define('StoreError', -1);
 
+// Class Store
+// ========
+// A template implementation of a store used to manage and persist Substance documents.
+//
 var Store = function() {
+  this.__impl__ = new Store.__impl__(this);
   this.__private__ = _.extend({}, this.__private__, new Store.__private__(this));
 };
 
-Store.__private__ = function(self) {
-
-  this.__recordStoreCommand__ = function(cmd, id, options) {
-    var track = this.__tracks__('__store__');
-    var changes = this.__changes__("__store__");
-    var cid = util.uuid();
-
-    var options = options || null;
-    var parent = track.get('__self__') || null;
-    var cmd = [cmd, id, options];
-
-    track.set("__self__", cid);
-    changes.set(cid, { command: cmd, parent: parent } );
-  }
-
-  this.__recordUpdate__ = function(id, options, orig) {
-    orig = orig || {};
-
-    var track = this.__tracks__(id);
-    var changes = this.__changes__(id);
-    var parent = track.get('__self__') || null;
-    var cid = util.uuid();
-
-    var tmp = {};
-
-    _.each(options, function(data, type) {
-      if (type === "meta" || type === "refs") {
-        data = util.diff(orig[type], data);
-      } else if (type === "commits") {
-        data = _.pluck(data, "sha");
-      }
-      tmp[type] = data;
-    });
-
-    options = tmp;
-    var cmd = ["update", id, options];
-
-    changes.set(cid, { command: cmd, parent: parent } );
-    track.set("__self__", cid);
-  }
-
-  // Retrieves a chain of commits from the given list list of commits
-  this.__getCommitChain__ = function(commit, commits) {
-    var result = [commit];
-    // edge cases: commit.parent == null
-    if (commit.parent == null) return result;
-    while(true) {
-      // break if no parent is set or the parent sha is not in the given set of commits
-      if (!commit.parent || !commits[commit.parent]) {
-        break;
-      }
-      commit = commits[commit.parent]
-      result.unshift(commit);
-    }
-
-    return result;
-  }
-
-  this.__commitsAsHash__ = function(commits) {
-    if (_.isArray(commits)) {
-      // convert the sequence of commits into an
-      var tmp = {};
-      _.each(commits, function(commit) {
-        if (!commit || !commit.sha) console.log("Illegal commit". commit," in ", commits);
-        else tmp[commit.sha] = commit;
-      });
-      commits = tmp;
-    }
-    return commits;
-  }
-
-  // Extracts the documents properties from a branch
-  // --------
-  //
-
-  this.__getProperties__ = function(id, branch) {
-    var refs = this.__refs__(id);
-    if (!refs.contains(branch)) return {};
-
-    var ref = refs.get(branch).head;
-
-    // Note: this will invalidate when the referenced commit changes
-    var properties_cache = this.__properties_cache__();
-    var cached = properties_cache.get(id);
-    if (cached && cached.ref === ref) return cached.properties;
-
-    var doc = new Document({id: id});
-    var commits = self.commits(id, ref);
-    _.each(commits, function(c) {
-      if (c.op[0] === "set") {
-        doc.apply(c.op, {"silent":true, "no-commit":true});
-      };
-      doc.properties.updated_at = c.date;
-    });
-
-    properties_cache.set(id, {ref: ref, properties: doc.properties});
-
-    return doc.properties;
-  }
-
-  // Imports new commits which are provided as a hash.
-  // --------
-  // The commits must reference each other to build a valid commit tree (or forest)
-  // with the root being an already registered commit.
-
-  this.__updateCommits__ = function(id, newCommits) {
-    if (!newCommits || newCommits.length == 0) return true;
-
-    var commits = this.__commits__(id);
-    if (_.isArray(newCommits)) newCommits = this.__commitsAsHash__(newCommits);
-
-    var pending = {};
-
-    _.each(newCommits, function(commit) {
-      if (!commits.contains(commit.sha)) {
-        var chain = this.__getCommitChain__(commit, newCommits);
-        var parentSha = chain[0].parent;
-        // if a parent is given, it must be an existing commits or
-        // in the set of pending commits
-        if(parentSha && !commits.contains(parentSha) && !pending[parentSha]) {
-          // The chain can not be applied, as the parent commit is invalid.
-          // Expecting null or an existing commit.
-          throw new errors.StoreError("Invalid commit chain"+chain.toString());
-        } else {
-          _.each(chain, function(commit) {
-            pending[commit.sha] = commit;
-          });
-        }
-      }
-    }, this);
-
-    // after all commits went through the check
-    _.each(pending, function(commit, sha) {
-      commits.set(sha, commit);
-    });
-
-    return true;
-  };
-
-  this.__updateMeta__ = function(id, meta) {
-    if (!meta || meta.length == 0) return true;
-    var __meta__ = this.__meta__(id);
-    _.each(meta, function(val, key) {
-      __meta__.set(key, val);
-    })
-    return true;
-  };
-
-  this.__updateRefs__ = function(id, refs) {
-    var __refs__ = this.__refs__(id);
-    _.each(refs, function(refs, branch) {
-      var newRefs = __refs__.get(branch) || {};
-      _.extend(newRefs, refs);
-      __refs__.set(branch, newRefs);
-    });
-    return true;
-  };
-
-  this.__update__ = function(id, options) {
-    options = options || {};
-
-    var orig = {}
-    if(options.commits) this.__updateCommits__(id, options.commits);
-    if(options.meta) {
-      orig.meta = this.__meta__(id).dump();
-      this.__updateMeta__(id, options.meta);
-    }
-    if(options.refs) {
-      orig.refs = this.__refs__(id).dump();
-      this.__updateRefs__(id, options.refs);
-    }
-    this.__recordUpdate__(id, options, orig);
-    return true;
-  };
-
-  this.__importDump__ = function(data) {
-    _.each(data['documents'], function(doc, id) {
-      if (self.exists(id)) {
-        self.delete(id);
-        self.confirmDeletion(id);
-      }
-      self.create(id)
-      self.update(id, doc);
-    });
-    return true;
-  };
-
-  this.__copyToTrash__ = function(id) {
-    var data = {}
-    data.doc = self.getInfo(id);
-    data.commits = self.commits(id);
-    data.blobs = {};
-
-    var ids = this.__documents__().keys();
-    _.each(ids, function(id) {
-      var blobs = this.__blobs__(id);
-      _.each(blobs.keys(), function(blobId) {
-        data.blobs[blobId] = blobs.get(blobId);
-      });
-    }, this);
-    this.__trash_bin__().set(id, data);
-  };
-
-  // data stores for document data
-  this.__documents__ = function() { return self.__impl__.hash("documents"); };
-  this.__trash_bin__ = function() { return self.__impl__.hash("trashbin"); };
-  this.__meta__ = function(id) { return self.__impl__.hash("meta", id); };
-  this.__refs__ = function(id) { return self.__impl__.hash("refs", id); };
-  this.__commits__ = function(id) { return self.__impl__.hash("commits", id); };
-  this.__blobs__ = function(id) { return self.__impl__.hash("blobs", id); };
-  this.__properties_cache__ = function() { return self.__impl__.hash("properties_cache"); };
-
-  // data structures to record store changes
-  this.__remotes__ = function() { return self.__impl__.hash("remotes"); };
-  this.__tracks__ = function(id) { return self.__impl__.hash("tracks", id); };
-  this.__changes__ = function(id) { return self.__impl__.hash("changes", id); };
-
-};
-
+// Store: Public Interface
+// ========
 Store.__prototype__ = function() {
-
-  // Public Interface
-  // ========
 
   // Checks if a document exists
   // --------
@@ -573,118 +358,348 @@ Store.__prototype__ = function() {
     return this.getChanges(trackId, last, lastRemote);
   }
 
-  this.__impl__ = {
+};
 
-    // Returns a key value store for the given path.
-    // --------
-    //
+// Store: Abstranct interface
+// --------
+// Must be implemented by subclasses.
+//
 
-    hash: function(path) {
-      throw "Called abstract method.";
-    },
+Store.__impl__ = function(self) {
 
-    // Removes all data of a document
-    // --------
-    //
-    delete: function (docId) {
-      throw "Called abstract method."
-    },
+  // Returns a key value store for the given path.
+  // --------
+  //
 
-    // Clears the whole store
-    // --------
-    //
-    clear: function() {
-      throw "Called abstract method.";
-    }
+  this.hash = function(path) {
+    throw "Called abstract method.";
+  };
 
+  // Removes all data of a document
+  // --------
+  //
+  this.delete = function (docId) {
+    throw "Called abstract method."
+  };
+
+  // Clears the whole store
+  // --------
+  //
+  this.clear = function() {
+    throw "Called abstract method.";
   };
 
 };
 
-  // A helper class to adapt a javascript object to a unified hash interface
-  // used by the store.
-  // --------
-  // Note: the hash keeps the keys in order of changes. I.e., the last changed key will be last of keys()
+// Store: (quasi) private interface
+// --------
+// Meant for internal use.
+//
+Store.__private__ = function(self) {
 
-  // An abstract hash implementation that can be used to adapt data structures
-  // to the Store.Hash interface easily.
+  this.__recordStoreCommand__ = function(cmd, id, options) {
+    var track = this.__tracks__('__store__');
+    var changes = this.__changes__("__store__");
+    var cid = util.uuid();
+
+    var options = options || null;
+    var parent = track.get('__self__') || null;
+    var cmd = [cmd, id, options];
+
+    track.set("__self__", cid);
+    changes.set(cid, { command: cmd, parent: parent } );
+  }
+
+  this.__recordUpdate__ = function(id, options, orig) {
+    orig = orig || {};
+
+    var track = this.__tracks__(id);
+    var changes = this.__changes__(id);
+    var parent = track.get('__self__') || null;
+    var cid = util.uuid();
+
+    var tmp = {};
+
+    _.each(options, function(data, type) {
+      if (type === "meta" || type === "refs") {
+        data = util.diff(orig[type], data);
+      } else if (type === "commits") {
+        data = _.pluck(data, "sha");
+      }
+      tmp[type] = data;
+    });
+
+    options = tmp;
+    var cmd = ["update", id, options];
+
+    changes.set(cid, { command: cmd, parent: parent } );
+    track.set("__self__", cid);
+  }
+
+  // Retrieves a chain of commits from the given list list of commits
+  this.__getCommitChain__ = function(commit, commits) {
+    var result = [commit];
+    // edge cases: commit.parent == null
+    if (commit.parent == null) return result;
+    while(true) {
+      // break if no parent is set or the parent sha is not in the given set of commits
+      if (!commit.parent || !commits[commit.parent]) {
+        break;
+      }
+      commit = commits[commit.parent]
+      result.unshift(commit);
+    }
+
+    return result;
+  }
+
+  this.__commitsAsHash__ = function(commits) {
+    if (_.isArray(commits)) {
+      // convert the sequence of commits into an
+      var tmp = {};
+      _.each(commits, function(commit) {
+        if (!commit || !commit.sha) console.log("Illegal commit". commit," in ", commits);
+        else tmp[commit.sha] = commit;
+      });
+      commits = tmp;
+    }
+    return commits;
+  }
+
+  // Extracts the documents properties from a branch
   // --------
   //
-  Store.AbstractHash = function() {
 
-    this.contains = function(key) {
-      var keys = this.keys();
-      if (!keys) return false;
-      else return keys.indexOf(key) >= 0;
-    };
+  this.__getProperties__ = function(id, branch) {
+    var refs = this.__refs__(id);
+    if (!refs.contains(branch)) return {};
 
-    this.keys = function() {
-      var keys = this.__get__("__keys__");
-      if (!keys) {
-        this.__set__("__keys__", []);
-        keys = [];
+    var ref = refs.get(branch).head;
+
+    // Note: this will invalidate when the referenced commit changes
+    var properties_cache = this.__properties_cache__();
+    var cached = properties_cache.get(id);
+    if (cached && cached.ref === ref) return cached.properties;
+
+    var doc = new Document({id: id});
+    var commits = self.commits(id, ref);
+    _.each(commits, function(c) {
+      if (c.op[0] === "set") {
+        doc.apply(c.op, {"silent":true, "no-commit":true});
+      };
+      doc.properties.updated_at = c.date;
+    });
+
+    properties_cache.set(id, {ref: ref, properties: doc.properties});
+
+    return doc.properties;
+  }
+
+  // Imports new commits which are provided as a hash.
+  // --------
+  // The commits must reference each other to build a valid commit tree (or forest)
+  // with the root being an already registered commit.
+
+  this.__updateCommits__ = function(id, newCommits) {
+    if (!newCommits || newCommits.length == 0) return true;
+
+    var commits = this.__commits__(id);
+    if (_.isArray(newCommits)) newCommits = this.__commitsAsHash__(newCommits);
+
+    var pending = {};
+
+    _.each(newCommits, function(commit) {
+      if (!commits.contains(commit.sha)) {
+        var chain = this.__getCommitChain__(commit, newCommits);
+        var parentSha = chain[0].parent;
+        // if a parent is given, it must be an existing commits or
+        // in the set of pending commits
+        if(parentSha && !commits.contains(parentSha) && !pending[parentSha]) {
+          // The chain can not be applied, as the parent commit is invalid.
+          // Expecting null or an existing commit.
+          throw new errors.StoreError("Invalid commit chain"+chain.toString());
+        } else {
+          _.each(chain, function(commit) {
+            pending[commit.sha] = commit;
+          });
+        }
       }
-      if (keys.indexOf(null) >= 0) {
-        console.log(util.callstack());
-      }
-      return keys;
-    };
+    }, this);
 
-    this.get = function(key) {
-      if(!this.contains(key)) {
-        //throw new errors.StoreError("Unknown key:"+key);
-        return undefined;
-      }
-      return this.__get__(key);
-    };
+    // after all commits went through the check
+    _.each(pending, function(commit, sha) {
+      commits.set(sha, commit);
+    });
 
-    this.set = function(key, value) {
-      if (!key) throw new errors.StoreError("Illegal key:"+key);
-      var keys = _.without(this.keys(), key);
-      keys.push(key);
-      this.__set__("__keys__", keys);
-      this.__set__(key, value);
-    };
-
-    this.delete = function(key) {
-      var keys = _.without(this.keys(), key);
-      this.__set__("__keys__", keys);
-      this.__set__(key, undefined);
-    };
-
-    this.clear = function() {
-      var keys = this.keys();
-      _.each(keys, function(key) {
-        this.delete(key);
-      }, this);
-      this.__set__("__keys__", []);
-    };
-
-    this.dump = function() {
-      var keys = this.keys();
-      var result = {};
-      _.each(keys, function(key) {
-        result[key] = this.__get__(key);
-      }, this);
-      return result;
-    };
-
-    // Trivial getter
-    this.__get__ = function(key) {
-      throw new Error("Not implemented");
-    };
-
-    // Trivial setter
-    this.__set__ = function(key, value) {
-      throw new Error("Not implemented");
-    };
+    return true;
   };
 
-  // Exports
-  if (typeof exports !== 'undefined') {
-    exports.Store = Store;
-  } else {
-    root.Substance.Store = Store;
-  }
+  this.__updateMeta__ = function(id, meta) {
+    if (!meta || meta.length == 0) return true;
+    var __meta__ = this.__meta__(id);
+    _.each(meta, function(val, key) {
+      __meta__.set(key, val);
+    })
+    return true;
+  };
+
+  this.__updateRefs__ = function(id, refs) {
+    var __refs__ = this.__refs__(id);
+    _.each(refs, function(refs, branch) {
+      var newRefs = __refs__.get(branch) || {};
+      _.extend(newRefs, refs);
+      __refs__.set(branch, newRefs);
+    });
+    return true;
+  };
+
+  this.__update__ = function(id, options) {
+    options = options || {};
+
+    var orig = {}
+    if(options.commits) this.__updateCommits__(id, options.commits);
+    if(options.meta) {
+      orig.meta = this.__meta__(id).dump();
+      this.__updateMeta__(id, options.meta);
+    }
+    if(options.refs) {
+      orig.refs = this.__refs__(id).dump();
+      this.__updateRefs__(id, options.refs);
+    }
+    this.__recordUpdate__(id, options, orig);
+    return true;
+  };
+
+  this.__importDump__ = function(data) {
+    _.each(data['documents'], function(doc, id) {
+      if (self.exists(id)) {
+        self.delete(id);
+        self.confirmDeletion(id);
+      }
+      self.create(id)
+      self.update(id, doc);
+    });
+    return true;
+  };
+
+  this.__copyToTrash__ = function(id) {
+    var data = {}
+    data.doc = self.getInfo(id);
+    data.commits = self.commits(id);
+    data.blobs = {};
+
+    var ids = this.__documents__().keys();
+    _.each(ids, function(id) {
+      var blobs = this.__blobs__(id);
+      _.each(blobs.keys(), function(blobId) {
+        data.blobs[blobId] = blobs.get(blobId);
+      });
+    }, this);
+    this.__trash_bin__().set(id, data);
+  };
+
+  // data stores for document data
+  this.__documents__ = function() { return self.__impl__.hash("documents"); };
+  this.__trash_bin__ = function() { return self.__impl__.hash("trashbin"); };
+  this.__meta__ = function(id) { return self.__impl__.hash("meta", id); };
+  this.__refs__ = function(id) { return self.__impl__.hash("refs", id); };
+  this.__commits__ = function(id) { return self.__impl__.hash("commits", id); };
+  this.__blobs__ = function(id) { return self.__impl__.hash("blobs", id); };
+  this.__properties_cache__ = function() { return self.__impl__.hash("properties_cache"); };
+
+  // data structures to record store changes
+  this.__remotes__ = function() { return self.__impl__.hash("remotes"); };
+  this.__tracks__ = function(id) { return self.__impl__.hash("tracks", id); };
+  this.__changes__ = function(id) { return self.__impl__.hash("changes", id); };
+
+};
+
+Store.prototype = new Store.__prototype__();
+
+// A helper class to adapt a javascript object to a unified hash interface
+// used by the store.
+// --------
+// Note: the hash keeps the keys in order of changes. I.e., the last changed key will be last of keys()
+
+// An abstract hash implementation that can be used to adapt data structures
+// to the Store.Hash interface easily.
+// --------
+//
+Store.AbstractHash = function() {
+
+  this.contains = function(key) {
+    var keys = this.keys();
+    if (!keys) return false;
+    else return keys.indexOf(key) >= 0;
+  };
+
+  this.keys = function() {
+    var keys = this.__get__("__keys__");
+    if (!keys) {
+      this.__set__("__keys__", []);
+      keys = [];
+    }
+    if (keys.indexOf(null) >= 0) {
+      console.log(util.callstack());
+    }
+    return keys;
+  };
+
+  this.get = function(key) {
+    if(!this.contains(key)) {
+      //throw new errors.StoreError("Unknown key:"+key);
+      return undefined;
+    }
+    return this.__get__(key);
+  };
+
+  this.set = function(key, value) {
+    if (!key) throw new errors.StoreError("Illegal key:"+key);
+    var keys = _.without(this.keys(), key);
+    keys.push(key);
+    this.__set__("__keys__", keys);
+    this.__set__(key, value);
+  };
+
+  this.delete = function(key) {
+    var keys = _.without(this.keys(), key);
+    this.__set__("__keys__", keys);
+    this.__set__(key, undefined);
+  };
+
+  this.clear = function() {
+    var keys = this.keys();
+    _.each(keys, function(key) {
+      this.delete(key);
+    }, this);
+    this.__set__("__keys__", []);
+  };
+
+  this.dump = function() {
+    var keys = this.keys();
+    var result = {};
+    _.each(keys, function(key) {
+      result[key] = this.__get__(key);
+    }, this);
+    return result;
+  };
+
+  // Trivial getter
+  this.__get__ = function(key) {
+    throw new Error("Not implemented");
+  };
+
+  // Trivial setter
+  this.__set__ = function(key, value) {
+    throw new Error("Not implemented");
+  };
+};
+
+// Exports
+if (typeof exports !== 'undefined') {
+  exports.Store = Store;
+} else {
+  root.Substance.Store = Store;
+}
 
 })(this);
