@@ -26,16 +26,16 @@ var RedisStore = function(settings) {
   };
   var settings = _.extend(defaults, settings);
 
-  this.__redis__ = redis.RedisAccess.Create(0);
-  this.__redis__.setHost(settings.host);
-  this.__redis__.setPort(settings.port);
+  this.redis = redis.RedisAccess.Create(0);
+  this.redis.setHost(settings.host);
+  this.redis.setPort(settings.port);
 
   // the scope is useful to keep parts of the redis db separated
   // e.g. tests would use its own, or one could separate user spaces
-  this.__redis__.setScope(settings.scope);
-  this.__redis__.connect();
+  this.redis.setScope(settings.scope);
+  this.redis.connect();
 
-  this.__impl__ = new RedisStore.__impl__(this);
+  this.impl = new RedisStore.__impl__(this);
 }
 
 RedisStore.__impl__ = function(self) {
@@ -43,50 +43,50 @@ RedisStore.__impl__ = function(self) {
   this.hash = function(type, id) {
     var key = type;
     if (id) key = key+":"+id;
-    return new RedisStore.Hash(self.__redis__, key);
+    return new RedisStore.Hash(self.redis, key);
   };
 
   this.delete = function (id) {
-    self.__redis__.removeWithPrefix("document:"+id);
+    self.redis.removeWithPrefix("document:"+id);
   };
 
   this.clear = function() {
-    self.__redis__.removeWithPrefix("");
+    self.redis.removeWithPrefix("");
   };
+
 };
 
-RedisStore.prototype = new Store.__prototype__();
+RedisStore.prototype = Store.prototype;
 
-RedisStore.Hash = function(__redis__, scope) {
-  this.__redis__ = __redis__;
+RedisStore.Hash = function(redis, scope) {
+  this.redis = redis;
   this.scope = scope;
 };
 
-RedisStore.Hash.__prototype__ = function() {
+RedisStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
 
-  this.scoped = function(key) {
+  scoped : function(key) {
     return this.scope+":"+key;
-  }
+  },
 
   // efficient implementation
-  this.contains = function(key) {
-    return this.__redis__.exists(this.scoped(key));
+  contains : function(key) {
+    return this.redis.exists(this.scoped(key));
+  },
+
+  __get__ : function(key) {
+    return this.redis.getJSON(this.scoped(key));
+  },
+
+  __set__ : function(key, value) {
+    if (value === undefined) {
+      this.redis.remove(this.scoped(key));
+    } else {
+      this.redis.set(this.scoped(key), value);
+    }
   }
 
-  this.__get__ = function(key) {
-    return this.__redis__.getJSON(this.scoped(key));
-  };
-
-  this.__set__ = function(key, value) {
-    if (value === undefined) {
-      this.__redis__.remove(this.scoped(key));
-    } else {
-      this.__redis__.set(this.scoped(key), value);
-    }
-  };
-};
-RedisStore.Hash.__prototype__.prototype = new Store.AbstractHash();
-RedisStore.Hash.prototype = new RedisStore.Hash.__prototype__();
+});
 
 // Exports
 if (typeof exports !== 'undefined') {

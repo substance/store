@@ -20,7 +20,7 @@ var MemoryStore = function() {
   Store.call(this);
   this.content = {};
 
-  this.__impl__ = new MemoryStore.__impl__(this);
+  this.impl = new MemoryStore.__impl__(this);
 }
 
 MemoryStore.__impl__ = function(self) {
@@ -46,29 +46,29 @@ MemoryStore.__impl__ = function(self) {
 
 };
 
-MemoryStore.prototype = new Store.__prototype__();
+MemoryStore.prototype = Store.prototype;
 
 MemoryStore.Hash = function(obj) {
   if (!obj) throw new Error("Illegal argument.");
   this.obj = obj;
 };
-MemoryStore.Hash.__prototype__ = function() {
 
-  this.contains = function(key) {
+MemoryStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
+
+  contains : function(key) {
     return !!this.obj[key];
-  }
+  },
 
-  this.__get__ = function(key) {
+  __get__ : function(key) {
     return this.obj[key];
-  };
+  },
 
-  this.__set__ = function(key, value) {
+  __set__ : function(key, value) {
     if (value === undefined) delete this.obj[key];
     else this.obj[key] = value;
   }
-};
-MemoryStore.Hash.__prototype__.prototype = new Store.AbstractHash();
-MemoryStore.Hash.prototype = new MemoryStore.Hash.__prototype__();
+
+});
 
 // Exports
 if (typeof exports !== 'undefined') {

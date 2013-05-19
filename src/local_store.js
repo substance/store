@@ -19,7 +19,7 @@ var LocalStore = function(scope) {
   Store.call(this);
   this.scope = scope || "";
 
-  this.__impl__ = new LocalStore.__impl__(this);
+  this.impl = new LocalStore.__impl__(this);
 };
 
 LocalStore.__impl__ = function(self) {
@@ -62,35 +62,36 @@ LocalStore.__impl__ = function(self) {
     });
   }
 };
-LocalStore.prototype = new Store.__prototype__();
+
+LocalStore.prototype = Store.prototype;
 
 LocalStore.Hash = function(scope) {
   this.scope = scope;
 };
-LocalStore.Hash.__prototype__ = function() {
 
-  this.scoped = function(key) {
+LocalStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
+
+  scoped : function(key) {
     return this.scope+":"+key;
-  }
+  },
 
-  this.contains = function(key) {
+  contains : function(key) {
     key = this.scoped(key);
     return localStorage.hasOwnProperty(key);
-  };
+  },
 
-  this.__get__ = function(key) {
+  __get__ : function(key) {
     key = this.scoped(key);
     return JSON.parse(localStorage.getItem(key));
-  };
+  },
 
-  this.__set__ = function(key, value) {
+  __set__ : function(key, value) {
     key = this.scoped(key);
     if (value === undefined) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify(value));
-  };
-};
-LocalStore.Hash.__prototype__.prototype = new Store.AbstractHash();
-LocalStore.Hash.prototype = new LocalStore.Hash.__prototype__();
+  }
+
+});
 
 // only add this when localStorage is available
 if (root.localStorage) {

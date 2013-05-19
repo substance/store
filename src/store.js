@@ -22,33 +22,37 @@ errors.define('StoreError', -1);
 // A template implementation of a store used to manage and persist Substance documents.
 //
 var Store = function() {
-  this.__impl__ = new Store.__impl__(this);
-  this.__private__ = _.extend({}, this.__private__, new Store.__private__(this));
+  this.impl = new Store.__impl__(this);
 };
 
 // Store: Public Interface
 // ========
+//
+
 Store.__prototype__ = function() {
+
+  // Part of the implementation is hidden
+  var pimpl = util.pimpl(new Store.__private__());
 
   // Checks if a document exists
   // --------
 
   this.exists = function (id) {
-    var p = this.__private__;
-    return p.__documents__().contains(id);
+    return pimpl(this).documents().contains(id);
   };
 
   // Creates a new document with the provided id
   // --------
 
   this.create = function (id, options) {
+    var p = pimpl(this);
+
     options = options || {};
-    var p = this.__private__;
 
     if(this.exists(id)) throw new errors.StoreError("Document already exists.");
     // TODO: maybe we want to store more store specific bookkeeping information
-    p.__documents__().set(id, true);
-    p.__recordStoreCommand__("create", id, {"role": "creator"});
+    p.documents().set(id, true);
+    p.recordStoreCommand("create", id, {"role": "creator"});
 
     this.update(id, options);
     return this.getInfo(id);
@@ -59,13 +63,13 @@ Store.__prototype__ = function() {
   // --------
 
   this.getInfo = function(id) {
-    var p = this.__private__;
+    var p = pimpl(this);
 
     if(!this.exists(id)) throw new errors.StoreError("Document does not exists.");
 
     var doc = {id: id};
-    doc.properties = p.__getProperties__(id, "master");
-    doc.meta = p.__meta__(id).dump();
+    doc.properties = p.getProperties(id, "master");
+    doc.meta = p.meta(id).dump();
     doc.refs = this.getRefs(id);
 
     return doc;
@@ -77,10 +81,12 @@ Store.__prototype__ = function() {
   // The result is sorted wrt. the date of last update.
 
   this.list = function () {
-    var p = this.__private__;
+    var p = pimpl(this);
+    var __docs__ = p.documents();
+    console.log("####", __docs__)
 
     var docs = [];
-    _.each(p.__documents__().keys(), function(id){
+    _.each(__docs__.keys(), function(id){
       var doc = this.getInfo(id);
       docs.push(doc);
     }, this);
@@ -99,12 +105,12 @@ Store.__prototype__ = function() {
   // Returns a document that is compatible to the format as used in Substance.Document.
 
   this.get = function(id) {
-    var p = this.__private__;
+    var p = pimpl(this);
 
     if(!this.exists(id)) throw new errors.StoreError("Document does not exists.");
 
     var doc = this.getInfo(id);
-    doc.commits = p.__commits__(id).dump();
+    doc.commits = p.commits(id).dump();
 
     return doc;
   };
@@ -115,12 +121,12 @@ Store.__prototype__ = function() {
   // If called without since the whole branch is returned.
 
   this.commits = function(id, last, since) {
-    var p = this.__private__;
+    var p = pimpl(this);
 
     var result = [];
     //console.log("store.commits", id, last, since);
 
-    var commits = p.__commits__(id);
+    var commits = p.commits(id);
 
     // if no range is specified return all commits
     if (arguments.length == 1 || (last === undefined && since === undefined)) {
@@ -160,15 +166,17 @@ Store.__prototype__ = function() {
   // TODO: add a way to empty the trash bin permanently
 
   this.delete = function (id) {
-    var p = this.__private__;
-    p.__copyToTrash__(id);
-    p.__documents__().delete(id);
-    p.__meta__(id).clear();
-    p.__refs__(id).clear();
-    p.__commits__(id).clear();
-    p.__blobs__(id).clear();
-    p.__recordStoreCommand__("delete", id);
-    this.__impl__.delete(id);
+    var p = pimpl(this);
+
+    p.copyToTrash(id);
+    p.documents().delete(id);
+    p.meta(id).clear();
+    p.refs(id).clear();
+    p.commits(id).clear();
+    p.blobs(id).clear();
+    p.recordStoreCommand("delete", id);
+    this.impl.delete(id);
+
     return true;
   };
 
@@ -177,27 +185,23 @@ Store.__prototype__ = function() {
   //
 
   this.update = function(id, options) {
-    var p = this.__private__;
-    return p.__update__(id, options);
-  }
+    return pimpl(this).update(id, options);
+  };
 
   this.getRefs = function(id, branch) {
-    var p = this.__private__;
-    var refs = p.__refs__(id).dump();
+    var refs = pimpl(this).refs(id).dump();
     if (branch) return refs[branch];
     else return refs;
   };
 
   this.setRefs = function(id, branch, refs) {
-    var p = this.__private__;
     var options = {};
     options.branch = refs;
-    return p.__updateRefs__(id, options);
+    return pimpl(this).updateRefs(id, options);
   };
 
   this.deletedDocuments = function() {
-    var p = this.__private__;
-    return p.__trash_bin__().keys();
+    return pimpl(this).trash_bin().keys();
   };
 
   this.confirmDeletion = function(id) {
@@ -206,9 +210,8 @@ Store.__prototype__ = function() {
   };
 
   this.seed = function(data) {
-    var p = this.__private__;
-    this.__impl__.clear();
-    p.__importDump__(data);
+    this.impl.clear();
+    pimpl(this).importDump(data);
     return true;
   };
 
@@ -222,7 +225,7 @@ Store.__prototype__ = function() {
 
     var dump = {
       'documents': docs,
-      'deleted-documents': this.__trash_bin__().dump()
+      'deleted-documents': this.trash_bin().dump()
     };
 
     return dump;
@@ -232,20 +235,17 @@ Store.__prototype__ = function() {
   // --------
 
   this.createBlob = function(docId, blobId, base64data) {
-    var p = this.__private__;
-    var blobs = p.__blobs__(docId);
-
-    if (blobs.contains(blobId)) throw new errors.StoreError("Blob already exists.");
-
+    var p = pimpl(this);
+    var blobs = p.blobs(docId);
     var blob = {
       id: blobId,
       document: docId,
       data: base64data
     };
 
+    if (blobs.contains(blobId)) throw new errors.StoreError("Blob already exists.");
     blobs.set(blobId, blob);
-
-    p.__recordUpdate__(docId, {"blobs": [blobId]});
+    p.recordUpdate(docId, {"blobs": [blobId]});
 
     return blob;
   };
@@ -254,8 +254,8 @@ Store.__prototype__ = function() {
   // --------
 
   this.getBlob = function(docId, blobId) {
-    var p = this.__private__;
-    var blobs = p.__blobs__(docId);
+    var p = pimpl(this);
+    var blobs = p.blobs(docId);
     if (!blobs.contains(blobId)) throw new errors.StoreError("Blob not found.");
     return blobs.get(blobId);
   };
@@ -264,8 +264,8 @@ Store.__prototype__ = function() {
   // --------
 
   this.blobExists = function (docId, blobId) {
-    var p = this.__private__;
-    var blobs = p.__blobs__(docId);
+    var p = pimpl(this);
+    var blobs = p.blobs(docId);
     return blobs.contains(blobId);
   };
 
@@ -273,8 +273,8 @@ Store.__prototype__ = function() {
   // --------
 
   this.deleteBlob = function(docId, blobId) {
-    var p = this.__private__;
-    var blobs = p.__blobs__(docId);
+    var p = pimpl(this);
+    var blobs = p.blobs(docId);
     blobs.delete(id);
     p.recordUpdate(docId, "blob", undefined);
     return true;
@@ -284,39 +284,34 @@ Store.__prototype__ = function() {
   // --------
 
   this.listBlobs = function(docId) {
-    var p = this.__private__;
-    var blobs = p.__blobs__(docId);
+    var p = pimpl(this);
+    var blobs = p.blobs(docId);
     return blobs.keys();
   };
-
 
   // Store managment API
   // ========
   //
 
   this.addRemote = function(id, options) {
-    var p = this.__private__;
-    var remotes = p.__remotes__();
-    if (remotes.contains(id)) {
-      throw new errors.StoreError("Remote store "+id+" has already been registered.");
-    }
+    var p = pimpl(this);
+    var remotes = p.remotes();
+    if (remotes.contains(id)) throw new errors.StoreError("Remote store "+id+" has already been registered.");
     remotes.set(id, options);
-  }
+  };
 
   this.updateRemote = function(id, options) {
-    var p = this.__private__;
-    var remotes = p.__remotes__();
-    if (!remotes.contains(id)) {
-      throw new errors.StoreError("Unknow remote store "+id);
-    }
+    var p = pimpl(this);
+    var remotes = p.remotes();
+    if (!remotes.contains(id)) throw new errors.StoreError("Unknow remote store "+id);
     options = _.extend(remotes.get(id), options);
     remotes.set(id, options);
-  }
+  };
 
   this.getChanges = function(id, start, since) {
-    var p = this.__private__;
+    var p = pimpl(this);
     var result = [];
-    var changes = p.__changes__(id);
+    var changes = p.changes(id);
 
     if(arguments.length == 1) {
       _.each(changes.keys(), function(key) {
@@ -341,22 +336,20 @@ Store.__prototype__ = function() {
     }
 
     return result;
-  }
+  };
 
   this.getDiff = function(storeId, trackId) {
-    var p = this.__private__;
-    var stores = p.__stores__();
+    var p = pimpl(this);
+    var stores = p.remotes();
 
-    if (!stores.contains(id)) {
-      throw new errors.StoreError("Unknow remote store "+id);
-    }
+    if (!stores.contains(id)) throw new errors.StoreError("Unknow remote store "+id);
 
-    var track = this.__tracks__(trackId);
+    var track = this.tracks(trackId);
     var lastRemote = track.get(storeId);
     var last = track.get('__self__');
 
     return this.getChanges(trackId, last, lastRemote);
-  }
+  };
 
 };
 
@@ -395,11 +388,11 @@ Store.__impl__ = function(self) {
 // --------
 // Meant for internal use.
 //
-Store.__private__ = function(self) {
+Store.__private__ = function() {
 
-  this.__recordStoreCommand__ = function(cmd, id, options) {
-    var track = this.__tracks__('__store__');
-    var changes = this.__changes__("__store__");
+  this.recordStoreCommand = function(cmd, id, options) {
+    var track = this.tracks('__store__');
+    var changes = this.changes("__store__");
     var cid = util.uuid();
 
     var options = options || null;
@@ -410,11 +403,11 @@ Store.__private__ = function(self) {
     changes.set(cid, { command: cmd, parent: parent } );
   }
 
-  this.__recordUpdate__ = function(id, options, orig) {
+  this.recordUpdate = function(id, options, orig) {
     orig = orig || {};
 
-    var track = this.__tracks__(id);
-    var changes = this.__changes__(id);
+    var track = this.tracks(id);
+    var changes = this.changes(id);
     var parent = track.get('__self__') || null;
     var cid = util.uuid();
 
@@ -437,7 +430,7 @@ Store.__private__ = function(self) {
   }
 
   // Retrieves a chain of commits from the given list list of commits
-  this.__getCommitChain__ = function(commit, commits) {
+  this.getCommitChain = function(commit, commits) {
     var result = [commit];
     // edge cases: commit.parent == null
     if (commit.parent == null) return result;
@@ -453,7 +446,7 @@ Store.__private__ = function(self) {
     return result;
   }
 
-  this.__commitsAsHash__ = function(commits) {
+  this.commitsAsHash = function(commits) {
     if (_.isArray(commits)) {
       // convert the sequence of commits into an
       var tmp = {};
@@ -470,19 +463,19 @@ Store.__private__ = function(self) {
   // --------
   //
 
-  this.__getProperties__ = function(id, branch) {
-    var refs = this.__refs__(id);
+  this.getProperties = function(id, branch) {
+    var refs = this.refs(id);
     if (!refs.contains(branch)) return {};
 
     var ref = refs.get(branch).head;
 
     // Note: this will invalidate when the referenced commit changes
-    var properties_cache = this.__properties_cache__();
+    var properties_cache = this.properties_cache();
     var cached = properties_cache.get(id);
     if (cached && cached.ref === ref) return cached.properties;
 
     var doc = new Document({id: id});
-    var commits = self.commits(id, ref);
+    var commits = this.self.commits(id, ref);
     _.each(commits, function(c) {
       if (c.op[0] === "set") {
         doc.apply(c.op, {"silent":true, "no-commit":true});
@@ -500,17 +493,17 @@ Store.__private__ = function(self) {
   // The commits must reference each other to build a valid commit tree (or forest)
   // with the root being an already registered commit.
 
-  this.__updateCommits__ = function(id, newCommits) {
+  this.updateCommits = function(id, newCommits) {
     if (!newCommits || newCommits.length == 0) return true;
 
-    var commits = this.__commits__(id);
-    if (_.isArray(newCommits)) newCommits = this.__commitsAsHash__(newCommits);
+    var commits = this.commits(id);
+    if (_.isArray(newCommits)) newCommits = this.commitsAsHash(newCommits);
 
     var pending = {};
 
     _.each(newCommits, function(commit) {
       if (!commits.contains(commit.sha)) {
-        var chain = this.__getCommitChain__(commit, newCommits);
+        var chain = this.getCommitChain(commit, newCommits);
         var parentSha = chain[0].parent;
         // if a parent is given, it must be an existing commits or
         // in the set of pending commits
@@ -534,43 +527,42 @@ Store.__private__ = function(self) {
     return true;
   };
 
-  this.__updateMeta__ = function(id, meta) {
+  this.updateMeta = function(id, meta) {
     if (!meta || meta.length == 0) return true;
-    var __meta__ = this.__meta__(id);
+    var __meta__ = this.meta(id);
     _.each(meta, function(val, key) {
       __meta__.set(key, val);
     })
     return true;
   };
 
-  this.__updateRefs__ = function(id, refs) {
-    var __refs__ = this.__refs__(id);
+  this.updateRefs = function(id, refs) {
+    var __refs__ = this.refs(id);
     _.each(refs, function(refs, branch) {
-      var newRefs = __refs__.get(branch) || {};
-      _.extend(newRefs, refs);
-      __refs__.set(branch, newRefs);
+      __refs__.extend(branch, refs);
     });
     return true;
   };
 
-  this.__update__ = function(id, options) {
+  this.update = function(id, options) {
     options = options || {};
 
     var orig = {}
-    if(options.commits) this.__updateCommits__(id, options.commits);
+    if(options.commits) this.updateCommits(id, options.commits);
     if(options.meta) {
-      orig.meta = this.__meta__(id).dump();
-      this.__updateMeta__(id, options.meta);
+      orig.meta = this.meta(id).dump();
+      this.updateMeta(id, options.meta);
     }
     if(options.refs) {
-      orig.refs = this.__refs__(id).dump();
-      this.__updateRefs__(id, options.refs);
+      orig.refs = this.refs(id).dump();
+      this.updateRefs(id, options.refs);
     }
-    this.__recordUpdate__(id, options, orig);
+    this.recordUpdate(id, options, orig);
     return true;
   };
 
-  this.__importDump__ = function(data) {
+  this.importDump = function(data) {
+    var self = this.self;
     _.each(data['documents'], function(doc, id) {
       if (self.exists(id)) {
         self.delete(id);
@@ -582,35 +574,37 @@ Store.__private__ = function(self) {
     return true;
   };
 
-  this.__copyToTrash__ = function(id) {
+  this.copyToTrash = function(id) {
+    var self = this.self;
+
     var data = {}
     data.doc = self.getInfo(id);
     data.commits = self.commits(id);
     data.blobs = {};
 
-    var ids = this.__documents__().keys();
+    var ids = this.documents().keys();
     _.each(ids, function(id) {
-      var blobs = this.__blobs__(id);
+      var blobs = this.blobs(id);
       _.each(blobs.keys(), function(blobId) {
         data.blobs[blobId] = blobs.get(blobId);
       });
     }, this);
-    this.__trash_bin__().set(id, data);
+    this.trash_bin().set(id, data);
   };
 
   // data stores for document data
-  this.__documents__ = function() { return self.__impl__.hash("documents"); };
-  this.__trash_bin__ = function() { return self.__impl__.hash("trashbin"); };
-  this.__meta__ = function(id) { return self.__impl__.hash("meta", id); };
-  this.__refs__ = function(id) { return self.__impl__.hash("refs", id); };
-  this.__commits__ = function(id) { return self.__impl__.hash("commits", id); };
-  this.__blobs__ = function(id) { return self.__impl__.hash("blobs", id); };
-  this.__properties_cache__ = function() { return self.__impl__.hash("properties_cache"); };
+  this.documents = function() { return this.self.impl.hash("documents"); };
+  this.trash_bin = function() { return this.self.impl.hash("trashbin"); };
+  this.meta = function(id) { return this.self.impl.hash("meta", id); };
+  this.refs = function(id) { return this.self.impl.hash("refs", id); };
+  this.commits = function(id) { return this.self.impl.hash("commits", id); };
+  this.blobs = function(id) { return this.self.impl.hash("blobs", id); };
+  this.properties_cache = function() { return this.self.impl.hash("properties_cache"); };
 
   // data structures to record store changes
-  this.__remotes__ = function() { return self.__impl__.hash("remotes"); };
-  this.__tracks__ = function(id) { return self.__impl__.hash("tracks", id); };
-  this.__changes__ = function(id) { return self.__impl__.hash("changes", id); };
+  this.remotes = function() { return this.self.impl.hash("remotes"); };
+  this.tracks = function(id) { return this.self.impl.hash("tracks", id); };
+  this.changes = function(id) { return this.self.impl.hash("changes", id); };
 
 };
 
@@ -661,6 +655,13 @@ Store.AbstractHash = function() {
     this.__set__(key, value);
   };
 
+  this.extend = function(key, obj) {
+    var val = this.get(key) || {};
+    if (!_.isObject(val)) new errors.StoreError("Stored value can not be extended.");
+    _.extend(val, obj);
+    this.set(key, val);
+  };
+
   this.delete = function(key) {
     var keys = _.without(this.keys(), key);
     this.__set__("__keys__", keys);
@@ -685,14 +686,21 @@ Store.AbstractHash = function() {
   };
 
   // Trivial getter
+  // --------
+  // gets called by this.get()
+
   this.__get__ = function(key) {
     throw new Error("Not implemented");
   };
 
   // Trivial setter
+  // --------
+  // gets called by this.set()
+
   this.__set__ = function(key, value) {
     throw new Error("Not implemented");
   };
+
 };
 
 // Exports
