@@ -205,7 +205,7 @@ var Store_private = function() {
       orig.refs = private.refs.call(this, id).dump();
       private.updateRefs.call(this, id, options.refs);
     }
-    private.recordDocumentCommand.call(this, "update", id, options, orig);
+    if (!options.replay) private.recordDocumentCommand.call(this, "update", id, options, orig);
     return true;
   };
 
@@ -226,7 +226,7 @@ var Store_private = function() {
   };
 
   this.getCommits = function(docId, commitIds) {
-    var commits = private.commits.call(this, id);
+    var commits = private.commits.call(this, docId);
 
     var result = {};
     _.each(commitIds, function(cid) {
@@ -234,7 +234,7 @@ var Store_private = function() {
       if(commit) result[cid] = commit;
     });
 
-    return commit;
+    return result;
   }
 
   this.importDump = function(data) {
@@ -328,30 +328,23 @@ var Store_private = function() {
     }
 
     track.set(Store.CURRENT, cid);
-    changes.set(cid, { id: cid, command: cmd, parent: parent } );
+    changes.set(cid, command);
   };
 
   this.applyDocumentCommand = function(docId, change) {
 
     var track = private.tracks.call(this, docId);
     var changes = private.changes.call(this, docId);
-    var cid = command.id;
+    var cid = change.id;
     var last = track.get(Store.CURRENT);
+    var name = change.command[0];
 
-    if (last && command.parent !== last) {
+    if (last && change.parent !== last) {
       throw new Error("Command has invalid parent.");
     }
 
     if (name === "update") {
-      var options = {};
-      var tmp = change.command[2];
-      _.each(tmp, function(val, key) {
-        if (key === "commits" || key === "blobs") {
-          options[key] = change.data[key];
-        } else {
-          options[key] = val;
-        }
-      });
+      var options = change.command[2];
       this.update(docId, options);
     }
     else if (name === "create-blob") {
@@ -368,6 +361,8 @@ var Store_private = function() {
       throw new Error("Illegal command.");
     }
 
+    track.set(Store.CURRENT, cid);
+    changes.set(cid, change);
   }
 
   // data stores for document data
@@ -492,7 +487,7 @@ Store.__prototype__ = function() {
 
     if (_.isArray(options)) {
       var commitIds = options;
-      return private.getCommits(this, id, commitIds);
+      return private.getCommits.call(this, id, commitIds);
     }
 
     var last = options.last;
@@ -640,7 +635,7 @@ Store.__prototype__ = function() {
       }
 
       change = changes.get(cid);
-      result.push(change);
+      result.unshift(change);
 
       if (!change) {
         throw new Error("Illegal state: changes");

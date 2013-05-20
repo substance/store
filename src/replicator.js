@@ -32,16 +32,16 @@ var Replicator_private = function() {
     var merged;
 
     function getLastChange(cb) {
-      self.remote.getLastChange(Store.MAIN_TRACK, function(err, data) {
+      self.remote.getLastChange(trackId, function(err, data) {
         lastRemote = data;
         cb(err);
       });
     }
 
     function getChanges(cb) {
-      localChanges = self.local.getChanges(trackId, lastLocal, lastRemote);
+      localChanges = self.local.getChanges(trackId, lastLocal, lastRemote) || [];
       self.remote.getChanges(trackId, lastRemote, lastLocal, function(err, data) {
-        remoteChanges = data;
+        remoteChanges = data || [];
         console.log("Changes:", trackId, ", mine:", JSON.stringify(localChanges), ", theirs:", JSON.stringify(remoteChanges));
         cb(err);
       });
@@ -78,7 +78,7 @@ var Replicator_private = function() {
             var options = change.command[2];
             if (cmd != "update" || !options.commits) return cb(null);
 
-            remote.commits(docId, options.commits, function(err, data) {
+            self.remote.commits(docId, options.commits, function(err, data) {
               if (data) options.commits = data;
               cb(err);
             });
@@ -109,7 +109,7 @@ var Replicator_private = function() {
 
   this.merge = function(trackId, changes) {
     if (trackId === Store.MAIN_TRACK) return this.storeMerge.merge(changes);
-    else return this.documentMerge.merge(trackId, changes);
+    else return this.documentMerge.merge(changes);
   }
 
 }
@@ -129,12 +129,12 @@ Replicator.__prototype__ = function() {
     function synchDocumentChanges(cb) {
       // documents have been created or deleted
       // content has to be exchanged
-      var docs = local.list();
+      var docs = self.local.list();
 
       var options = {
         items: docs,
-        iterator: function(doc, docId, cb) {
-          private.synchChanges.call(self, docId, cb);
+        iterator: function(doc, cb) {
+          private.synchChanges.call(self, doc.id, cb);
         }
       }
 
