@@ -32,20 +32,20 @@ var Store_private = function() {
 
   var private = this;
 
-  this.recordStoreCommand = function(cmd, type, id, options) {
+  this.recordStoreCommand = function(cmd, id, options) {
     var track = private.tracks.call(this, Store.MAIN_TRACK);
     var changes = private.changes.call(this, Store.MAIN_TRACK);
     var cid = util.uuid();
 
     var options = options || null;
     var parent = track.get(Store.CURRENT) || null;
-    var cmd = [cmd, type, id, options];
+    var cmd = [cmd, id, options];
 
     track.set(Store.CURRENT, cid);
     changes.set(cid, { id: cid, command: cmd, parent: parent } );
   }
 
-  this.recordUpdate = function(id, options, orig) {
+  this.recordDocumentCommand = function(cmd, id, options, orig) {
     orig = orig || {};
 
     var track = private.tracks.call(this, id);
@@ -53,20 +53,26 @@ var Store_private = function() {
     var parent = track.get(Store.CURRENT) || null;
     var cid = util.uuid();
 
-    var tmp = {};
+    // prepare the options for update
+    // meta and refs recorded in minimal version (diff)
+    // commits are recorded only by ids as the commits are stored additionally in
+    // the document
+    if (cmd === "update") {
+      var tmp = {};
 
-    _.each(options, function(data, type) {
-      if (type === "meta" || type === "refs") {
-        data = util.diff(orig[type], data);
-      } else if (type === "commits") {
-        data = _.pluck(data, "sha");
-      }
-      tmp[type] = data;
-    });
+      _.each(options, function(data, type) {
+        if (type === "meta" || type === "refs") {
+          data = util.diff(orig[type], data);
+        } else if (type === "commits") {
+          data = _.pluck(data, "sha");
+        }
+        tmp[type] = data;
+      });
 
-    options = tmp;
-    var cmd = ["update", id, options];
+      options = tmp;
+    }
 
+    var cmd = [cmd, id, options];
     changes.set(cid, { id: cid, command: cmd, parent: parent } );
     track.set(Store.CURRENT, cid);
   }
@@ -199,7 +205,7 @@ var Store_private = function() {
       orig.refs = private.refs.call(this, id).dump();
       private.updateRefs.call(this, id, options.refs);
     }
-    private.recordUpdate.call(this, id, options, orig);
+    private.recordDocumentCommand.call(this, "update", id, options, orig);
     return true;
   };
 
@@ -258,6 +264,30 @@ var Store_private = function() {
       });
     }, this);
     private.trash_bin.call(this).set(id, data);
+  };
+
+  this.createBlob = function(docId, blobId, base64data, replay) {
+
+    var blobs = private.blobs.call(this, docId);
+    var blob = {
+      id: blobId,
+      document: docId,
+      data: base64data
+    };
+
+    if (blobs.contains(blobId)) throw new errors.StoreError("Blob already exists.");
+    blobs.set(blobId, blob);
+
+    if (!replay) private.recordDocumentCommand.call(this, "create-blob", docId, blob);
+
+    return blob;
+  };
+
+  this.deleteBlob = function(docId, blobId, replay) {
+    var blobs = private.blobs.call(this, docId);
+    blobs.delete(blobId);
+    if (!replay) private.recordDocumentCommand.call(this, "delete-blob", docId, blobId);
+    return true;
   };
 
   this.applyStoreCommand = function(command) {
@@ -323,6 +353,14 @@ var Store_private = function() {
         }
       });
       this.update(docId, options);
+    }
+    else if (name === "create-blob") {
+      var options = change.command[2];
+      private.createBlob.call(this, docId, options.id, options.data, true);
+    }
+    else if (name === "delete-blob") {
+      var blobId = change.command[2];
+      private.deleteBlob.call(this, docId, blobId, true);
     }
     else if (name === "merge") {
     }
@@ -641,18 +679,7 @@ Store.Blobs = function(store, private) {
   // --------
 
   this.create = function(docId, blobId, base64data) {
-    var blobs = private.blobs.call(store, docId);
-    var blob = {
-      id: blobId,
-      document: docId,
-      data: base64data
-    };
-
-    if (blobs.contains(blobId)) throw new errors.StoreError("Blob already exists.");
-    blobs.set(blobId, blob);
-    private.recordUpdate.call(store, docId, {"blobs": [blobId]});
-
-    return blob;
+    return private.createBlob.call(store, docId, blobId, base64data);
   };
 
   // Get Blob by id
@@ -676,10 +703,7 @@ Store.Blobs = function(store, private) {
   // --------
 
   this.delete = function(docId, blobId) {
-    var blobs = private.blobs.call(store, docId);
-    blobs.delete(id);
-    private.recordStoreCommand(docId, "blob", undefined);
-    return true;
+    return private.deleteBlob.call(store, docId, blobId);
   };
 
   // Returns a list of blob ids

@@ -14,7 +14,7 @@ var Replicator = function(params) {
   this.remoteID = params.remoteID;
 
   this.storeMerge = new Replicator.StoreMergeStrategy();
-  this.documentMerge = undefined;
+  this.documentMerge = new Replicator.DocumentMergeStrategy();
 
 };
 
@@ -56,9 +56,37 @@ var Replicator_private = function() {
 
     function fetchData(cb) {
       if (trackId !== Store.MAIN_TRACK) {
-        // TODO: fetch data (commits and blobs)
-      }
-      cb(null);
+        var docId = trackId;
+
+        _.each(merged.theirs, function(change) {
+          var cid = change.id;
+          var cmd = change.command[0];
+          if (cmd == "update") {
+            var options = change.command[2];
+            if (options.commits) {
+              options.commits = local.commits(docId, options.commits);
+            }
+          }
+        });
+
+        // TODO: fetch data for mine from remote
+        var options = {
+          items: merged.mine,
+          iterator: function(change, cb) {
+            var cid = change.id;
+            var cmd = change.command[0];
+            var options = change.command[2];
+            if (cmd != "update" || !options.commits) return cb(null);
+
+            remote.commits(docId, options.commits, function(err, data) {
+              if (data) options.commits = data;
+              cb(err);
+            });
+          }
+        }
+        util.async.each(options, cb);
+
+      } else cb(null);
     }
 
     function synch(cb) {
@@ -99,7 +127,18 @@ Replicator.__prototype__ = function() {
     }
 
     function synchDocumentChanges(cb) {
-      cb(null);
+      // documents have been created or deleted
+      // content has to be exchanged
+      var docs = local.list();
+
+      var options = {
+        items: docs,
+        iterator: function(doc, docId, cb) {
+          private.synchChanges.call(self, docId, cb);
+        }
+      }
+
+      util.async.each(options, cb);
     }
 
     util.async.sequential([synchStoreChanges, synchDocumentChanges], cb);
@@ -163,7 +202,7 @@ Replicator.StoreMergeStrategy = function() {
         if (conflict) conflicts[docId] = conflict;
       });
 
-      if (_.isEmpty()) {
+      if (_.isEmpty(conflicts)) {
         // create an extra change
         var cid = util.uuid();
         var myLast = _.last(changes.mine).id;
@@ -178,6 +217,29 @@ Replicator.StoreMergeStrategy = function() {
         // TODO:
         throw new Error("Merging with conflicts is not implemented yet.");
       }
+    }
+
+    return result;
+  };
+
+};
+
+Replicator.DocumentMergeStrategy = function() {
+
+  this.merge = function(changes) {
+    var result = {
+      mine: [],
+      theirs: []
+    };
+
+    // Fast-Forward
+    if (changes.mine.length == 0 || changes.theirs.length == 0) {
+      result.mine = changes.theirs;
+      result.theirs = changes.mine;
+    }
+    // Non-Fast-Forward
+    else {
+      throw new Error("Non fast-forward merges are not yet supported");
     }
 
     return result;
