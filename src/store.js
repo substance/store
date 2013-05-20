@@ -117,7 +117,7 @@ var Store_private = function() {
     if (cached && cached.ref === ref) return cached.properties;
 
     var doc = new Document({id: id});
-    var commits = this.commits(id, ref);
+    var commits = this.commits(id, {last: ref});
     _.each(commits, function(c) {
       if (c.op[0] === "set") {
         doc.apply(c.op, {"silent":true, "no-commit":true});
@@ -218,6 +218,18 @@ var Store_private = function() {
 
     return true;
   };
+
+  this.getCommits = function(docId, commitIds) {
+    var commits = private.commits.call(this, id);
+
+    var result = {};
+    _.each(commitIds, function(cid) {
+      var commit = commits.get(cid);
+      if(commit) result[cid] = commit;
+    });
+
+    return commit;
+  }
 
   this.importDump = function(data) {
     _.each(data['documents'], function(doc, id) {
@@ -437,14 +449,24 @@ Store.__prototype__ = function() {
   // If called without last and since, all commits are returned.
   // If called without since the whole branch is returned.
 
-  this.commits = function(id, last, since) {
+  this.commits = function(id, options) {
+    options = options || {};
+
+    if (_.isArray(options)) {
+      var commitIds = options;
+      return private.getCommits(this, id, commitIds);
+    }
+
+    var last = options.last;
+    var since = options.since;
+
     var result = [];
     //console.log("store.commits", id, last, since);
 
     var commits = private.commits.call(this, id);
 
     // if no range is specified return all commits
-    if (arguments.length == 1 || (last === undefined && since === undefined)) {
+    if (last === undefined && since === undefined) {
       var all = commits.dump();
       _.each(all, function(commit) {
         result.push(commit);

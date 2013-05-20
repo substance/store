@@ -65,8 +65,8 @@
       cb(null, result);
     };
 
-    this.commits = function(id, last, since, cb) {
-      var result = this.store.commits(id, last, since);
+    this.commits = function(id, options, cb) {
+      var result = this.store.commits(id, options);
       cb(null, result);
     };
 
