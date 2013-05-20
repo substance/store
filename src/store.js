@@ -32,17 +32,17 @@ var Store_private = function() {
 
   var private = this;
 
-  this.recordStoreCommand = function(cmd, id, options) {
+  this.recordStoreCommand = function(cmd, type, id, options) {
     var track = private.tracks.call(this, Store.MAIN_TRACK);
     var changes = private.changes.call(this, Store.MAIN_TRACK);
     var cid = util.uuid();
 
     var options = options || null;
     var parent = track.get(Store.CURRENT) || null;
-    var cmd = [cmd, id, options];
+    var cmd = [cmd, type, id, options];
 
     track.set(Store.CURRENT, cid);
-    changes.set(cid, { command: cmd, parent: parent } );
+    changes.set(cid, { id: cid, command: cmd, parent: parent } );
   }
 
   this.recordUpdate = function(id, options, orig) {
@@ -67,7 +67,7 @@ var Store_private = function() {
     options = tmp;
     var cmd = ["update", id, options];
 
-    changes.set(cid, { command: cmd, parent: parent } );
+    changes.set(cid, { id: cid, command: cmd, parent: parent } );
     track.set(Store.CURRENT, cid);
   }
 
@@ -203,6 +203,22 @@ var Store_private = function() {
     return true;
   };
 
+  this.delete = function (id, replay) {
+
+    private.copyToTrash.call(this, id);
+    private.documents.call(this).delete(id);
+    private.meta.call(this, id).clear();
+    private.refs.call(this, id).clear();
+    private.commits.call(this, id).clear();
+    private.blobs.call(this, id).clear();
+
+    if(!replay) private.recordStoreCommand.call(this, "delete", id);
+
+    this.impl.delete(id);
+
+    return true;
+  };
+
   this.importDump = function(data) {
     _.each(data['documents'], function(doc, id) {
       if (this.exists(id)) {
@@ -231,6 +247,78 @@ var Store_private = function() {
     }, this);
     private.trash_bin.call(this).set(id, data);
   };
+
+  this.applyStoreCommand = function(command) {
+
+    var cmd = command.command;
+    var name = cmd[0];
+
+    var options = {
+      replay: true
+    };
+
+    var track = private.tracks.call(this, Store.MAIN_TRACK);
+    var changes = private.changes.call(this, Store.MAIN_TRACK);
+    var cid = command.id;
+    var last = track.get(Store.CURRENT);
+
+    if (last && command.parent !== last) {
+      throw new Error("Command has invalid parent.");
+    }
+
+    if (name === "create") {
+      this.create(cmd[1], options);
+    }
+    else if (name === "update") {
+      // TODO: need store API for that
+      _.each(cmd[2], function(val, key) {
+        track.set(key, val);
+      });
+    }
+    else if (name === "delete") {
+      private.delete.call(this, cmd[1], true);
+    }
+    else if (name === "merge") {
+      // nothing
+    }
+    else {
+      throw new Error("Illegal command.");
+    }
+
+    track.set(Store.CURRENT, cid);
+    changes.set(cid, { id: cid, command: cmd, parent: parent } );
+  };
+
+  this.applyDocumentCommand = function(docId, change) {
+
+    var track = private.tracks.call(this, docId);
+    var changes = private.changes.call(this, docId);
+    var cid = command.id;
+    var last = track.get(Store.CURRENT);
+
+    if (last && command.parent !== last) {
+      throw new Error("Command has invalid parent.");
+    }
+
+    if (name === "update") {
+      var options = {};
+      var tmp = change.command[2];
+      _.each(tmp, function(val, key) {
+        if (key === "commits" || key === "blobs") {
+          options[key] = change.data[key];
+        } else {
+          options[key] = val;
+        }
+      });
+      this.update(docId, options);
+    }
+    else if (name === "merge") {
+    }
+    else {
+      throw new Error("Illegal command.");
+    }
+
+  }
 
   // data stores for document data
   this.documents = function() { return this.impl.hash("documents"); };
@@ -281,9 +369,13 @@ Store.__prototype__ = function() {
     options = options || {};
 
     if(this.exists(id)) throw new errors.StoreError("Document already exists.");
+
     // TODO: maybe we want to store more store specific bookkeeping information
+    // TODO: documents seems to be redundant
     private.documents.call(this).set(id, true);
-    private.recordStoreCommand.call(this, "create", id, {"role": "creator"});
+    private.tracks.call(this, id).set("role", "creator");
+
+    if (!options.replay) private.recordStoreCommand.call(this, "create", id, {"role": "creator"});
 
     this.update(id, options);
     return this.getInfo(id);
@@ -389,18 +481,7 @@ Store.__prototype__ = function() {
   // TODO: add a way to empty the trash bin permanently
 
   this.delete = function (id) {
-
-    private.copyToTrash.call(this, id);
-    private.documents.call(this).delete(id);
-    private.meta.call(this, id).clear();
-    private.refs.call(this, id).clear();
-    private.commits.call(this, id).clear();
-    private.blobs.call(this, id).clear();
-    private.recordStoreCommand.call(this, "delete", id);
-
-    this.impl.delete(id);
-
-    return true;
+    return private.delete.call(this, id);
   };
 
   // Updates a document
