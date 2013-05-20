@@ -22,9 +22,11 @@ errors.define('StoreError', -1);
 // A template implementation of a store used to manage and persist Substance documents.
 //
 var Store = function() {
-  this.impl = new Store.__impl__(this);
-};
 
+  this.impl = new Store.__impl__(this);
+  this.blobs = this.__blobs__();
+
+};
 
 var Store_private = function() {
 
@@ -257,6 +259,14 @@ Store.__prototype__ = function() {
   // Part of the implementation is hidden
   var private = new Store_private();
 
+  this.store = function() {
+    return this;
+  }
+
+  this.__blobs__ = function() {
+    return new Store.Blobs(this, private);
+  }
+
   // Checks if a document exists
   // --------
 
@@ -444,59 +454,6 @@ Store.__prototype__ = function() {
     return dump;
   };
 
-  // Create a new blob for given data
-  // --------
-
-  this.createBlob = function(docId, blobId, base64data) {
-    var blobs = private.blobs.call(this, docId);
-    var blob = {
-      id: blobId,
-      document: docId,
-      data: base64data
-    };
-
-    if (blobs.contains(blobId)) throw new errors.StoreError("Blob already exists.");
-    blobs.set(blobId, blob);
-    private.recordUpdate.call(this, docId, {"blobs": [blobId]});
-
-    return blob;
-  };
-
-  // Get Blob by id
-  // --------
-
-  this.getBlob = function(docId, blobId) {
-    var blobs = private.blobs.call(this, docId);
-    if (!blobs.contains(blobId)) throw new errors.StoreError("Blob not found.");
-    return blobs.get(blobId);
-  };
-
-  // Checks if blob exists
-  // --------
-
-  this.blobExists = function (docId, blobId) {
-    var blobs = private.blobs.call(this, docId);
-    return blobs.contains(blobId);
-  };
-
-  // Delete blob by given id
-  // --------
-
-  this.deleteBlob = function(docId, blobId) {
-    var blobs = private.blobs.call(this, docId);
-    blobs.delete(id);
-    private.recordUpdate(docId, "blob", undefined);
-    return true;
-  };
-
-  // Returns a list of blob ids
-  // --------
-
-  this.listBlobs = function(docId) {
-    var blobs = private.blobs.call(this, docId);
-    return blobs.keys();
-  };
-
   // Store managment API
   // ========
   //
@@ -566,6 +523,68 @@ Store.__prototype__ = function() {
     var last = track.get(Store.CURRENT);
 
     return last;
+  };
+
+  this.applyCommand = function(trackId, command, data) {
+    if (trackId === Store.MAIN_TRACK) private.applyStoreCommand.call(this, command, data);
+    else private.applyDocumentCommand.call(this, trackId, command, data);
+  }
+
+};
+
+Store.Blobs = function(store, private) {
+
+  // Create a new blob for given data
+  // --------
+
+  this.create = function(docId, blobId, base64data) {
+    var blobs = private.blobs.call(store, docId);
+    var blob = {
+      id: blobId,
+      document: docId,
+      data: base64data
+    };
+
+    if (blobs.contains(blobId)) throw new errors.StoreError("Blob already exists.");
+    blobs.set(blobId, blob);
+    private.recordUpdate.call(store, docId, {"blobs": [blobId]});
+
+    return blob;
+  };
+
+  // Get Blob by id
+  // --------
+
+  this.get = function(docId, blobId) {
+    var blobs = private.blobs.call(store, docId);
+    if (!blobs.contains(blobId)) throw new errors.StoreError("Blob not found.");
+    return blobs.get(blobId);
+  };
+
+  // Checks if blob exists
+  // --------
+
+  this.exists = function (docId, blobId) {
+    var blobs = private.blobs.call(store, docId);
+    return blobs.contains(blobId);
+  };
+
+  // Delete blob by given id
+  // --------
+
+  this.delete = function(docId, blobId) {
+    var blobs = private.blobs.call(store, docId);
+    blobs.delete(id);
+    private.recordStoreCommand(docId, "blob", undefined);
+    return true;
+  };
+
+  // Returns a list of blob ids
+  // --------
+
+  this.list = function(docId) {
+    var blobs = private.blobs.call(store, docId);
+    return blobs.keys();
   };
 
 };

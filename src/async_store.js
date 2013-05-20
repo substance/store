@@ -17,9 +17,14 @@
 
   var AsyncStore = function(store) {
     this.store = store;
+    this.blobs = this.__blobs__();
   };
 
   AsyncStore.__prototype__ = function() {
+
+    this.__blobs__ = function() {
+      return new AsyncStore.Blobs(this.store);
+    }
 
     this.exists = function (id, cb) {
       var result = this.store.exists(id);
@@ -125,43 +130,60 @@
       cb(null, result);
     };
 
-    this.createBlob = function(docId, blobId, base64data, cb) {
+    this.getChanges = function(id, start, since, cb) {
+      if (arguments.length == 2) {
+        cb = start;
+        start = undefined; since = undefined;
+      }
+      var result = this.store.getChanges(id, start, since);
+      cb(null, result);
+    };
+
+    this.getLastChange = function(trackId, cb) {
+      var result = this.store.getLastChange(trackId);
+      cb(null, result);
+    };
+  };
+  AsyncStore.prototype = new AsyncStore.__prototype__();
+
+  AsyncStore.Blobs = function(store) {
+
+    this.create = function(docId, blobId, base64data, cb) {
       var result;
       try {
-        result = this.store.createBlob(docId, blobId, base64data);
+        result = store.blobs.create(docId, blobId, base64data);
       } catch(err) {
         return cb(err);
       }
       cb(null, result);
     };
 
-    this.getBlob = function(docId, blobId, cb) {
-      var result = this.store.getBlob(docId, blobId);
+    this.get = function(docId, blobId, cb) {
+      var result = store.blobs.get(docId, blobId);
       if (!result) return cb(new errors.StoreError("Blob not found."));
       cb(null, result);
     };
 
-    this.blobExists = function (docId, blobId, cb) {
-      var result = this.store.blobExists(docId, blobId);
+    this.exists = function (docId, blobId, cb) {
+      var result = store.blobs.exists(docId, blobId);
       cb(null, result);
     };
 
-    this.deleteBlob = function(docId, blobId, cb) {
-      this.store.deleteBlob(docId, blobId);
+    this.delete = function(docId, blobId, cb) {
+      store.delete(docId, blobId);
       cb(null);
     };
 
-    this.listBlobs = function(docId, cb) {
-      var result = this.store.listBlobs(docId);
+    this.list = function(docId, cb) {
+      var result = store.blobs.list(docId);
       cb(null, result);
     };
 
   };
-  AsyncStore.prototype = new AsyncStore.__prototype__();
 
   // Exports
   if (typeof exports !== 'undefined') {
-    exports.AsyncStore = AsyncStore;
+    module.exports = AsyncStore;
   } else {
     root.Substance.AsyncStore = AsyncStore;
   }
