@@ -39,9 +39,8 @@ LocalStore.__impl__ = function(self) {
     })
   }
 
-  this.hash = function(type, id) {
-    var path = id ? [self.scope, "document", id, type] : [self.scope, type]
-    var key = path.join(":");
+  this.hash = function() {
+    var key = Store.defaultHashKey(arguments, self.scope);
     return new LocalStore.Hash(key);
   },
 

@@ -40,9 +40,9 @@ var RedisStore = function(settings) {
 
 RedisStore.__impl__ = function(self) {
 
-  this.hash = function(type, id) {
-    var key = type;
-    if (id) key = key+":"+id;
+
+  this.hash = function() {
+    var key = Store.defaultHashKey(arguments);
     return new RedisStore.Hash(self.redis, key);
   };
 

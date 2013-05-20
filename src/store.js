@@ -233,10 +233,10 @@ var Store_private = function() {
   // data stores for document data
   this.documents = function() { return this.impl.hash("documents"); };
   this.trash_bin = function() { return this.impl.hash("trashbin"); };
-  this.meta = function(id) { return this.impl.hash("meta", id); };
-  this.refs = function(id) { return this.impl.hash("refs", id); };
-  this.commits = function(id) { return this.impl.hash("commits", id); };
-  this.blobs = function(id) { return this.impl.hash("blobs", id); };
+  this.meta = function(id) { return this.impl.hash("document", id, "meta"); };
+  this.refs = function(id) { return this.impl.hash("document", id, "refs"); };
+  this.commits = function(id) { return this.impl.hash("document", id, "commits"); };
+  this.blobs = function(id) { return this.impl.hash("document", id, "blobs"); };
   this.properties_cache = function() { return this.impl.hash("properties_cache"); };
 
   // data structures to record store changes
@@ -572,6 +572,15 @@ Store.__prototype__ = function() {
 
 Store.MAIN_TRACK = "__store__";
 Store.CURRENT = "__current__";
+
+Store.defaultHashKey = function(args, scope) {
+  var path = [];
+  if (scope) path.push(scope);
+  for (var idx=0; idx<args.length; idx++) {
+    path.push(args[idx]);
+  }
+  return path.join(":");
+}
 
 // Store: Abstranct interface
 // --------

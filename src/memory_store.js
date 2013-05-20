@@ -25,8 +25,8 @@ var MemoryStore = function() {
 
 MemoryStore.__impl__ = function(self) {
 
-  this.hash = function(type, id) {
-    var path = id ? ["document", id, type] : [type]
+  this.hash = function() {
+    var path = arguments;
     var obj = self.content;
     _.each(path, function(scope) {
       obj[scope] = obj[scope] || {};
