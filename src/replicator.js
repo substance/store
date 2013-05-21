@@ -22,7 +22,7 @@ var Replicator_private = function() {
 
   var private = this;
 
-  this.synchChanges = function(trackId, cb) {
+  this.syncChanges = function(trackId, cb) {
     var self = this;
 
     var lastLocal = this.local.getLastChange(trackId);
@@ -64,12 +64,11 @@ var Replicator_private = function() {
           if (cmd == "update") {
             var options = change.command[2];
             if (options.commits) {
-              options.commits = local.commits(docId, options.commits);
+              options.commits = self.local.commits(docId, options.commits);
             }
           }
         });
 
-        // TODO: fetch data for mine from remote
         var options = {
           items: merged.mine,
           iterator: function(change, cb) {
@@ -89,7 +88,7 @@ var Replicator_private = function() {
       } else cb(null);
     }
 
-    function synch(cb) {
+    function sync(cb) {
       // TODO: apply merge locally
       _.each(merged.mine, function(change) {
         self.local.applyCommand(trackId, change);
@@ -98,13 +97,13 @@ var Replicator_private = function() {
       var options = {
         items: merged.theirs,
         iterator: function(change, cb) {
-          // TODO: apply change remotely
+          self.remote.applyCommand(trackId, change, cb);
         }
       };
       util.async.each(options, cb);
     }
 
-    util.async.sequential([getLastChange, getChanges, merge, fetchData, synch], cb);
+    util.async.sequential([getLastChange, getChanges, merge, fetchData, sync], cb);
   };
 
   this.merge = function(trackId, changes) {
@@ -118,15 +117,15 @@ Replicator.__prototype__ = function() {
 
   var private = new Replicator_private();
 
-  this.synch = function(cb) {
+  this.sync = function(cb) {
 
     var self = this;
 
-    function synchStoreChanges(cb) {
-      private.synchChanges.call(self, Store.MAIN_TRACK, cb);
+    function syncStoreChanges(cb) {
+      private.syncChanges.call(self, Store.MAIN_TRACK, cb);
     }
 
-    function synchDocumentChanges(cb) {
+    function syncDocumentChanges(cb) {
       // documents have been created or deleted
       // content has to be exchanged
       var docs = self.local.list();
@@ -134,14 +133,14 @@ Replicator.__prototype__ = function() {
       var options = {
         items: docs,
         iterator: function(doc, cb) {
-          private.synchChanges.call(self, doc.id, cb);
+          private.syncChanges.call(self, doc.id, cb);
         }
       }
 
       util.async.each(options, cb);
     }
 
-    util.async.sequential([synchStoreChanges, synchDocumentChanges], cb);
+    util.async.sequential([syncStoreChanges, syncDocumentChanges], cb);
   };
 
 };

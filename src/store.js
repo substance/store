@@ -375,7 +375,6 @@ var Store_private = function() {
   this.properties_cache = function() { return this.impl.hash("properties_cache"); };
 
   // data structures to record store changes
-  this.remotes = function() { return this.impl.hash("remotes"); };
   this.tracks = function(id) { return this.impl.hash("tracks", id); };
   this.changes = function(id) {
     return this.impl.hash("changes", id);
@@ -590,22 +589,9 @@ Store.__prototype__ = function() {
     return dump;
   };
 
-  // Store managment API
+  // Store management API
   // ========
   //
-
-  this.addRemote = function(id, options) {
-    var remotes = private.remotes.call(this);
-    if (remotes.contains(id)) throw new errors.StoreError("Remote store "+id+" has already been registered.");
-    remotes.set(id, options);
-  };
-
-  this.updateRemote = function(id, options) {
-    var remotes = private.remotes.call(this);
-    if (!remotes.contains(id)) throw new errors.StoreError("Unknown remote store "+id);
-    options = _.extend(remotes.get(id), options);
-    remotes.set(id, options);
-  };
 
   this.getChanges = function(id, start, since) {
     var result = [];
@@ -646,14 +632,6 @@ Store.__prototype__ = function() {
     return result;
   };
 
-  this.getDiff = function(storeId, trackId) {
-    var track = private.tracks.call(this, trackId);
-    var lastRemote = track.get(storeId);
-    var last = track.get(Store.CURRENT);
-
-    return this.getChanges(trackId, last, lastRemote);
-  };
-
   this.getLastChange = function(trackId) {
     var track = private.tracks.call(this, trackId);
     var last = track.get(Store.CURRENT);
@@ -661,9 +639,9 @@ Store.__prototype__ = function() {
     return last;
   };
 
-  this.applyCommand = function(trackId, command, data) {
-    if (trackId === Store.MAIN_TRACK) private.applyStoreCommand.call(this, command, data);
-    else private.applyDocumentCommand.call(this, trackId, command, data);
+  this.applyCommand = function(trackId, command) {
+    if (trackId === Store.MAIN_TRACK) private.applyStoreCommand.call(this, command);
+    else private.applyDocumentCommand.call(this, trackId, command);
   }
 
 };
