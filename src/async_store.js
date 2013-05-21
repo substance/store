@@ -143,6 +143,16 @@
       var result = this.store.getLastChange(trackId);
       cb(null, result);
     };
+
+    this.applyCommand = function(trackId, command, cb) {
+      try {
+        this.store.applyCommand(trackId, command);
+        cb(null);
+      } catch (err) {
+        cb(err);
+      }
+    };
+
   };
   AsyncStore.prototype = new AsyncStore.__prototype__();
 
