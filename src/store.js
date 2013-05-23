@@ -549,7 +549,7 @@ Store.__prototype__ = function() {
 
   this.setRefs = function(id, branch, refs) {
     var options = {};
-    options.branch = refs;
+    options[branch] = refs;
     return private.updateRefs.call(this, id, options);
   };
 
