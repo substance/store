@@ -647,7 +647,8 @@ Store.__prototype__ = function() {
     start = start || null;
     since = since || null;
 
-    if (start === since || !changes.contains(start)) return result;
+    if (start === since || !changes.contains(start)
+      || (since && !changes.contains(since))) return result;
 
     var change;
     var cid = start;
@@ -655,9 +656,8 @@ Store.__prototype__ = function() {
       if (cid === since) break;
 
       // how to treat this? the start and since are in different branches
-      // Maybe it would be better to have
       if (cid == null) {
-        return undefined;
+        throw new Error("Incompatible changes: since and last are not from the same branch");
       }
 
       change = changes.get(cid);
