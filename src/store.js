@@ -24,7 +24,6 @@ errors.define('StoreError', -1);
 var Store = function() {
 
   this.impl = new Store.__impl__(this);
-  this.blobs = this.__blobs__();
 
 };
 
@@ -395,10 +394,6 @@ Store.__prototype__ = function() {
     return this;
   }
 
-  this.__blobs__ = function() {
-    return new Store.Blobs(this, private);
-  }
-
   // Checks if a document exists
   // --------
 
@@ -567,6 +562,9 @@ Store.__prototype__ = function() {
     return true;
   };
 
+  // Serialization API
+  // ========
+
   this.seed = function(data) {
     this.impl.clear();
     private.importDump.call(this, data);
@@ -587,6 +585,48 @@ Store.__prototype__ = function() {
     };
 
     return dump;
+  };
+
+  // Blob API
+  // ========
+
+  // Create a new blob for given data
+  // --------
+
+  this.createBlob = function(docId, blobId, base64data) {
+    return private.createBlob.call(this, docId, blobId, base64data);
+  };
+
+  // Get Blob by id
+  // --------
+
+  this.getBlob = function(docId, blobId) {
+    var blobs = private.blobs.call(this, docId);
+    if (!blobs.contains(blobId)) throw new errors.StoreError("Blob not found.");
+    return blobs.get(blobId);
+  };
+
+  // Checks if blob exists
+  // --------
+
+  this.hasBlob = function (docId, blobId) {
+    var blobs = private.blobs.call(this, docId);
+    return blobs.contains(blobId);
+  };
+
+  // Delete blob by given id
+  // --------
+
+  this.deleteBlob = function(docId, blobId) {
+    return private.deleteBlob.call(this, docId, blobId);
+  };
+
+  // Returns a list of blob ids
+  // --------
+
+  this.listBlobs = function(docId) {
+    var blobs = private.blobs.call(this, docId);
+    return blobs.keys();
   };
 
   // Store management API
@@ -643,49 +683,6 @@ Store.__prototype__ = function() {
     if (trackId === Store.MAIN_TRACK) private.applyStoreCommand.call(this, command);
     else private.applyDocumentCommand.call(this, trackId, command);
   }
-
-};
-
-Store.Blobs = function(store, private) {
-
-  // Create a new blob for given data
-  // --------
-
-  this.create = function(docId, blobId, base64data) {
-    return private.createBlob.call(store, docId, blobId, base64data);
-  };
-
-  // Get Blob by id
-  // --------
-
-  this.get = function(docId, blobId) {
-    var blobs = private.blobs.call(store, docId);
-    if (!blobs.contains(blobId)) throw new errors.StoreError("Blob not found.");
-    return blobs.get(blobId);
-  };
-
-  // Checks if blob exists
-  // --------
-
-  this.exists = function (docId, blobId) {
-    var blobs = private.blobs.call(store, docId);
-    return blobs.contains(blobId);
-  };
-
-  // Delete blob by given id
-  // --------
-
-  this.delete = function(docId, blobId) {
-    return private.deleteBlob.call(store, docId, blobId);
-  };
-
-  // Returns a list of blob ids
-  // --------
-
-  this.list = function(docId) {
-    var blobs = private.blobs.call(store, docId);
-    return blobs.keys();
-  };
 
 };
 
