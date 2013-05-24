@@ -25,22 +25,64 @@ var Replicator_private = function() {
   this.syncChanges = function(trackId, cb) {
     var self = this;
 
-    var lastLocal = this.local.getLastChange(trackId);
-    var lastRemote;
+    var localIndex;
+    var remoteIndex;
+    var localDiff;
+    var remoteDiff;
     var localChanges;
     var remoteChanges;
+
     var merged;
 
-    function getLastChange(cb) {
-      self.remote.getLastChange(trackId, function(err, data) {
-        lastRemote = data;
+    function getIndex(cb) {
+      localIndex = self.local.getIndex(trackId)
+      self.remote.getIndex(trackId, function(err, data) {
+        remoteIndex = data;
+        console.log("Replicator.syncChanges.getIndex:", "localIndex", localIndex, "remoteIndex", remoteIndex);
         cb(err);
       });
     }
 
+    function computeDiff(cb) {
+      var tmp_local = {}
+      var tmp_remote = {}
+
+      localDiff = [];
+      remoteDiff = [];
+
+      // Note: localIndex and remoteIndex is the list of all changes
+      //  in descending order (latest = first)
+      // OTOH, the resulting lists of ids, localDiff and remoteDiff,
+      //  are in ascending order (oldest = first)
+
+      for(var idx = 0; idx < localIndex.length; idx++) {
+        tmp_local[localIndex[idx]] = true;
+      }
+      for(var idx = 0; idx < remoteIndex.length; idx++) {
+        tmp_remote[remoteIndex[idx]] = true;
+      }
+      for(var idx = 0; idx < localIndex.length; idx++) {
+        var id = localIndex[idx];
+        if(!tmp_remote[id]) localDiff.unshift(id);
+        else break;
+      }
+      for(var idx = 0; idx < remoteIndex.length; idx++) {
+        var id = remoteIndex[idx];
+        if(!tmp_local[id]) remoteDiff.unshift(id);
+        else break;
+      }
+
+      console.log("Replicator.syncChanges.computeDiff:", "localDiff", localDiff, "remoteDiff", remoteDiff);
+
+      cb(null);
+    }
+
     function getChanges(cb) {
-      localChanges = self.local.getChanges(trackId, lastLocal, lastRemote) || [];
-      self.remote.getChanges(trackId, lastRemote, lastLocal, function(err, data) {
+      // Note: currently we fetch all ids before the last
+      //  This could be improved by keeping the last synched change for every remote repos.
+      //  For now we keep the mechanism simple.
+      localChanges = self.local.getChanges(trackId, localDiff) || [];
+      self.remote.getChanges(trackId, remoteDiff, function(err, data) {
         remoteChanges = data || [];
         console.log("Changes:", trackId, ", mine:", JSON.stringify(localChanges), ", theirs:", JSON.stringify(remoteChanges));
         cb(err);
@@ -113,7 +155,7 @@ var Replicator_private = function() {
       util.async.each(options, cb);
     }
 
-    util.async.sequential([getLastChange, getChanges, merge, fetchData, sync], cb);
+    util.async.sequential([getIndex, computeDiff, getChanges, merge, fetchData, sync], cb);
   };
 
   this.merge = function(trackId, changes) {
@@ -255,7 +297,6 @@ Replicator.DocumentMergeStrategy = function() {
   };
 
 };
-
 
 root.Substance.Replicator2 = Replicator;
 

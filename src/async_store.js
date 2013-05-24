@@ -171,20 +171,17 @@ AsyncStore.__prototype__ = function() {
   // ========
   //
 
-  this.getChanges = function(id, last, since, cb) {
-
-    if (arguments.length == 2) {
-      cb = last;
-      last = undefined;
-      since = undefined;
+  this.getChanges = function(trackId, changeIds, cb) {
+    try {
+      var result = this.store.getChanges(trackId, changeIds);
+      cb(null, result);
+    } catch (err) {
+      cb(err);
     }
-
-    var result = this.store.getChanges(id, last, since);
-    cb(null, result);
   };
 
-  this.getLastChange = function(trackId, cb) {
-    var result = this.store.getLastChange(trackId);
+  this.getIndex = function(trackId, cb) {
+    var result = this.store.getIndex(trackId);
     cb(null, result);
   };
 

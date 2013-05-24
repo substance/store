@@ -655,55 +655,36 @@ Store.__prototype__ = function() {
   // ========
   //
 
-  this.getChanges = function(id, last, since) {
+  this.getChanges = function(id, changeIds) {
     var result = [];
     var changes = private.changes.call(this, id);
 
-    if(arguments.length == 1) {
-      _.each(changes.keys(), function(key) {
-        result.push(changes.get(key));
-      });
-      return result;
-    }
-
-    last = last || null;
-    since = since || null;
-
-    // console.log("store.getChanges", id, last, since);
-
-    //if (last === since) console.log("... no change");
-    //if (!changes.contains(last)) console.log("... unknown last.");
-    //if (since && !changes.contains(since)) console.log("... unknown since.");
-
-    if (last === since || !changes.contains(last)
-      || (since && !changes.contains(since))) return result;
-
-    var change;
-    var cid = last;
-    while(true) {
-      if (cid === since) break;
-
-      // how to treat this? the start and since are in different branches
-      if (cid == null) {
-        throw new Error("Incompatible changes: since and last are not from the same branch");
-      }
-
-      change = changes.get(cid);
-      result.unshift(change);
-
-      if (!change) {
-        throw new Error("Illegal state: changes");
-      }
-      cid = change.parent;
-    }
+    _.each(changeIds, function(cid) {
+      if(!changes.contains(cid)) throw new StoreError("Illegal argument: unknown change id.");
+      result.push(changes.get(cid));
+    });
 
     return result;
   };
 
-  this.getLastChange = function(trackId) {
-    var track = private.tracks.call(this, trackId);
-    var last = track.get(Store.CURRENT);
-    return last;
+  this.getIndex = function(id) {
+    var result = [];
+    var changes = private.changes.call(this, id);
+    var track = private.tracks.call(this, id);
+    var last = track.get(Store.CURRENT) || null;
+
+    var change;
+    var cid = last;
+
+    while(true) {
+      if (cid === null) break;
+      result.push(cid);
+      change = changes.get(cid);
+      if (!change) throw new Error("Internal error: unknown change id.");
+      cid = change.parent;
+    }
+
+    return result;
   };
 
   this.applyCommand = function(trackId, command) {
