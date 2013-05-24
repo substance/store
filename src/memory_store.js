@@ -26,6 +26,10 @@ var MemoryStore = function() {
 MemoryStore.__impl__ = function(self) {
 
   this.hash = function() {
+    return this.sortedhash.apply(this, arguments);
+  };
+
+  this.sortedhash = function() {
     var path = arguments;
     var obj = self.content;
     _.each(path, function(scope) {

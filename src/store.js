@@ -386,15 +386,13 @@ var Store_private = function() {
   this.trash_bin = function() { return this.impl.hash("trashbin"); };
   this.meta = function(id) { return this.impl.hash("document", id, "meta"); };
   this.refs = function(id) { return this.impl.hash("document", id, "refs"); };
-  this.commits = function(id) { return this.impl.hash("document", id, "commits"); };
+  this.commits = function(id) { return this.impl.sortedhash("document", id, "commits"); };
   this.blobs = function(id) { return this.impl.hash("document", id, "blobs"); };
   this.properties_cache = function() { return this.impl.hash("properties_cache"); };
 
   // data structures to record store changes
   this.tracks = function(id) { return this.impl.hash("tracks", id); };
-  this.changes = function(id) {
-    return this.impl.hash("changes", id);
-  };
+  this.changes = function(id) { return this.impl.sortedhash("changes", id); };
 
 };
 
@@ -735,6 +733,10 @@ Store.__impl__ = function(self) {
   //
 
   this.hash = function(path) {
+    return this.sortedhash(path);
+  };
+
+  this.sortedhash = function(path) {
     throw "Called abstract method.";
   };
 
@@ -765,11 +767,8 @@ Store.prototype = new Store.__prototype__();
 // used by the store.
 // --------
 // Note: the hash keeps the keys in order of changes. I.e., the last changed key will be last of keys()
-
-// An abstract hash implementation that can be used to adapt data structures
-// to the Store.Hash interface easily.
-// --------
 //
+
 Store.AbstractHash = function() {
 
   this.contains = function(key) {

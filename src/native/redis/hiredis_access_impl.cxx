@@ -260,7 +260,11 @@ void HiRedisList::add(jsobjects::JSValuePtr val) {
   addAsString(json);
 }
 
-void HiRedisList::remove(unsigned int index) {
+void HiRedisList::remove(const std::string& val) {
+  ReplyPtr reply((redisReply*) redisCommand(redis.redis, commands[DELETE], val.c_str()));
+}
+
+void HiRedisList::removeAt(unsigned int index) {
   const std::string &val = get(index);
   ReplyPtr reply((redisReply*) redisCommand(redis.redis, commands[DELETE], val.c_str()));
 }

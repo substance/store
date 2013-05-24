@@ -77,7 +77,9 @@ public:
 
   virtual void add(jsobjects::JSValuePtr val) = 0;
 
-  virtual void remove(unsigned int index) = 0;
+  virtual void remove(const std::string &val) = 0;
+
+  virtual void removeAt(unsigned int index) = 0;
 
   virtual jsobjects::JSValuePtr getJSON(unsigned int index) _THROW(RedisError) = 0;
 

@@ -37,21 +37,25 @@ LocalStore.__impl__ = function(self) {
     _.each(keys, function(key) {
       localStorage.removeItem(key);
     })
-  }
+  };
 
   this.hash = function() {
+    return this.sortedhash.apply(this, arguments);
+  };
+
+  this.sortedhash = function() {
     var key = Store.defaultHashKey(arguments, self.scope);
     return new LocalStore.Hash(key);
-  },
+  };
 
   this.delete = function (id) {
     // TODO: maybe could improve, as the actual structure is not defined here
     clear(self.scope+":document:"+id);
-  },
+  };
 
   this.clear = function() {
     clear(self.scope);
-  }
+  };
 
   this.log = function(id) {
     var changes = self.getChanges(id);
@@ -59,7 +63,7 @@ LocalStore.__impl__ = function(self) {
     _.each(changes, function(c){
       console.log(JSON.stringify(c));
     });
-  }
+  };
 };
 
 LocalStore.prototype = Store.prototype;

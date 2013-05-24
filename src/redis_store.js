@@ -3,7 +3,6 @@
 
 var root = this;
 
-// Native extension
 if (typeof exports !== 'undefined') {
   var util = require('../../util/util');
   var Store = require('./store').Store;
@@ -40,10 +39,14 @@ var RedisStore = function(settings) {
 
 RedisStore.__impl__ = function(self) {
 
-
   this.hash = function() {
     var key = Store.defaultHashKey(arguments);
     return new RedisStore.Hash(self.redis, key);
+  };
+
+  this.sortedhash = function() {
+    var key = Store.defaultHashKey(arguments);
+    return new RedisStore.SortedHash(self.redis, key);
   };
 
   this.delete = function (id) {
@@ -56,38 +59,82 @@ RedisStore.__impl__ = function(self) {
   };
 
 };
-
 RedisStore.prototype = Store.prototype;
 
 RedisStore.Hash = function(redis, scope) {
   this.redis = redis;
   this.scope = scope;
+  this.hash = redis.asHash(scope);
+}
+
+RedisStore.Hash.__prototype__ = function() {
+
+  this.contains = function(key) {
+    return this.hash.contains(key);
+  };
+
+  this.keys = function() {
+    return this.hash.getKeys();
+  };
+
+  this.set = function(key, value) {
+    if (!key) throw new StoreError("Illegal key:"+key);
+
+    if (value === undefined) {
+      this.hash.remove(key);
+    } else {
+      this.hash.set(key, value);
+    }
+  };
+
+  this.clear = function() {
+    var keys = this.keys();
+    _.each(keys, function(key) {
+      this.delete(key);
+    }, this);
+  };
+
+  this.delete = function(key) {
+    this.hash.remove(key);
+  };
+
+  this.__get__ = function(key) {
+    return this.hash.getJSON(key);
+  };
+};
+RedisStore.Hash.__prototype__.prototype = new Store.AbstractHash();
+RedisStore.Hash.prototype = new RedisStore.Hash.__prototype__();
+
+RedisStore.SortedHash = function(redis, scope) {
+  RedisStore.Hash.call(this, redis, scope);
+  this.list = redis.asList(scope+":list");
 };
 
-RedisStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
+RedisStore.SortedHash.__prototype__ = function() {
 
-  scoped : function(key) {
-    return this.scope+":"+key;
-  },
+  var __super__ = util.prototype(this);
 
-  // efficient implementation
-  contains : function(key) {
-    return this.redis.exists(this.scoped(key));
-  },
+  this.keys = function() {
+    return this.list.asArray();
+  };
 
-  __get__ : function(key) {
-    return this.redis.getJSON(this.scoped(key));
-  },
+  this.set = function(key, value) {
+    __super__.set.call(this, key, value);
 
-  __set__ : function(key, value) {
-    if (value === undefined) {
-      this.redis.remove(this.scoped(key));
-    } else {
-      this.redis.set(this.scoped(key), value);
+    this.list.remove(key);
+    if (value !== undefined) {
+      this.list.addAsString(key);
     }
-  }
+  };
 
-});
+  this.delete = function(key) {
+    this.list.remove(key);
+    this.hash.remove(key);
+  };
+
+};
+RedisStore.SortedHash.__prototype__.prototype = RedisStore.Hash.prototype;
+RedisStore.SortedHash.prototype = new RedisStore.SortedHash.__prototype__();
 
 // Exports
 if (typeof exports !== 'undefined') {
