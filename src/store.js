@@ -225,14 +225,17 @@ var Store_private = function() {
   };
 
   this.getCommits = function(docId, commitIds) {
+    //console.log("store.getCommits", docId, commitIds);
     var commits = private.commits.call(this, docId);
 
     var result = {};
     _.each(commitIds, function(cid) {
+      if(!commits.contains(cid)) throw new StoreError("Commit not available: "+cid);
       var commit = commits.get(cid);
       if(commit) result[cid] = commit;
     });
 
+    //console.log("...result", result);
     return result;
   }
 
@@ -352,7 +355,7 @@ var Store_private = function() {
         if (!change.data || !change.data.commits) throw new StoreError("Missing commits' data.");
         options.commits = change.data.commits;
       }
-      console.log("store.applyDocumentCommand(), update", options);
+      // console.log("store.applyDocumentCommand(), update", options);
       this.update(docId, options);
     }
     else if (name === "create-blob") {
@@ -499,42 +502,46 @@ Store.__prototype__ = function() {
       return private.getCommits.call(this, id, commitIds);
     }
 
-    var last = options.last;
-    var since = options.since;
+    var last = options.last || null;
+    var since = options.since || null;
+
+    // console.log("store.commits", id, last, since);
 
     var result = [];
-    //console.log("store.commits", id, last, since);
-
     var commits = private.commits.call(this, id);
 
     // if no range is specified return all commits
-    if (last === undefined && since === undefined) {
+    if (!last && !since) {
+      // console.log("store.commits: returning all.");
       var all = commits.dump();
       _.each(all, function(commit) {
         result.push(commit);
       });
       return result;
     }
-    else if (last === since) {
-      return result;
-    }
 
-    var commit = commits.get(last);
+    if (last === since || !commits.contains(last)
+      || (since && !commits.contains(since))) return result;
 
-    if (!commit) {
-      return result;
-    }
+    var commit;
+    var cid = last;
+    while(true) {
+      if (cid === since) break;
 
-    commit.sha = last;
-    result.unshift(commit);
+      if (cid == null) {
+        throw new Error("Invalid arguments: since and last are from different branches");
+      }
 
-    while (true) {
-      commit = (commit.parent) ? commits.get(commit.parent) : null;
-      if (!commit || commit.sha === since) break;
+      commit = commits.get(cid);
       result.unshift(commit);
+
+      if (!commit) {
+        throw new Error("Illegal state: changes");
+      }
+      cid = commit.parent;
     }
 
-    //console.log("store.commits: result", result);
+    // console.log("store.commits: result", result);
     return result;
   };
 
@@ -662,11 +669,11 @@ Store.__prototype__ = function() {
     last = last || null;
     since = since || null;
 
-    console.log("store.getChanges", id, last, since);
+    // console.log("store.getChanges", id, last, since);
 
-    if (last === since) console.log("... no change");
-    if (!changes.contains(last)) console.log("... unknown last.");
-    if (since && !changes.contains(since)) console.log("... unknown since.");
+    //if (last === since) console.log("... no change");
+    //if (!changes.contains(last)) console.log("... unknown last.");
+    //if (since && !changes.contains(since)) console.log("... unknown since.");
 
     if (last === since || !changes.contains(last)
       || (since && !changes.contains(since))) return result;
@@ -778,9 +785,6 @@ Store.AbstractHash = function() {
     if (!keys) {
       this.__set__("__keys__", []);
       keys = [];
-    }
-    if (keys.indexOf(null) >= 0) {
-      console.log(util.callstack());
     }
     return keys;
   };
