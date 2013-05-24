@@ -62,10 +62,14 @@ var Replicator_private = function() {
           var cid = change.id;
           var cmd = change.command[0];
           if (cmd == "update") {
+            var data = {};
             var options = change.command[2];
             if (options.commits) {
-              options.commits = self.local.commits(docId, options.commits);
+              var commitIds = options.commits;
+              var commits = self.local.commits(docId, {commits: commitIds});
+              data.commits = commits;
             }
+            change.data = data;
           }
         });
 
@@ -77,9 +81,14 @@ var Replicator_private = function() {
             var options = change.command[2];
             if (cmd != "update" || !options.commits) return cb(null);
 
-            self.remote.commits(docId, options.commits, function(err, data) {
-              if (data) options.commits = data;
-              cb(err);
+            var options = change.command[2];
+            var commitIds = options.commits;
+
+            var data = {};
+            self.remote.commits(docId, {commits: commitIds}, function(err, commits) {
+              if (err) return cb(err);
+              data.commits = commits;
+              cb(null);
             });
           }
         }
@@ -126,8 +135,8 @@ Replicator.__prototype__ = function() {
     }
 
     function syncDocumentChanges(cb) {
-      // documents have been created or deleted
-      // content has to be exchanged
+      // Note: currently only active documents get synced, i.e. not those documents
+      // that are in the trashbin.
       var docs = self.local.list();
 
       var options = {

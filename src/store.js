@@ -15,7 +15,7 @@ if (typeof exports !== 'undefined') {
   var _ = root._;
 }
 
-errors.define('StoreError', -1);
+var StoreError = errors.define('StoreError', -1);
 
 // Class Store
 // ========
@@ -157,7 +157,7 @@ var Store_private = function() {
         if(parentSha && !commits.contains(parentSha) && !pending[parentSha]) {
           // The chain can not be applied, as the parent commit is invalid.
           // Expecting null or an existing commit.
-          throw new errors.StoreError("Invalid commit chain"+chain.toString());
+          throw new StoreError("Invalid commit chain"+chain.toString());
         } else {
           _.each(chain, function(commit) {
             pending[commit.sha] = commit;
@@ -274,7 +274,7 @@ var Store_private = function() {
       data: base64data
     };
 
-    if (blobs.contains(blobId)) throw new errors.StoreError("Blob already exists.");
+    if (blobs.contains(blobId)) throw new StoreError("Blob already exists.");
     blobs.set(blobId, blob);
 
     if (!replay) private.recordDocumentCommand.call(this, "create-blob", docId, blob);
@@ -342,17 +342,26 @@ var Store_private = function() {
       throw new Error("Command has invalid parent.");
     }
 
+    var options = {
+      replay: true
+    };
+
     if (name === "update") {
-      var options = change.command[2];
+      _.extend(options, change.command[2]);
+      if (options.commits) {
+        if (!change.data || !change.data.commits) throw new StoreError("Missing commits' data.");
+        options.commits = change.data.commits;
+      }
+      console.log("store.applyDocumentCommand(), update", options);
       this.update(docId, options);
     }
     else if (name === "create-blob") {
-      var options = change.command[2];
-      private.createBlob.call(this, docId, options.id, options.data, true);
+      _.extend(options, change.command[2]);
+      private.createBlob.call(this, docId, options.id, options.data, options.replay);
     }
     else if (name === "delete-blob") {
       var blobId = change.command[2];
-      private.deleteBlob.call(this, docId, blobId, true);
+      private.deleteBlob.call(this, docId, blobId, options.replay);
     }
     else if (name === "merge") {
     }
@@ -407,7 +416,7 @@ Store.__prototype__ = function() {
   this.create = function (id, options) {
     options = options || {};
 
-    if(this.exists(id)) throw new errors.StoreError("Document already exists.");
+    if(this.exists(id)) throw new StoreError("Document already exists.");
 
     // TODO: maybe we want to store more store specific bookkeeping information
     // TODO: documents seems to be redundant
@@ -425,7 +434,7 @@ Store.__prototype__ = function() {
   // --------
 
   this.getInfo = function(id) {
-    if(!this.exists(id)) throw new errors.StoreError("Document does not exists.");
+    if(!this.exists(id)) throw new StoreError("Document does not exists.");
 
     var doc = {id: id};
     doc.properties = private.getProperties.call(this, id, "master");
@@ -463,7 +472,7 @@ Store.__prototype__ = function() {
   // Returns a document that is compatible to the format as used in Substance.Document.
 
   this.get = function(id) {
-    if(!this.exists(id)) throw new errors.StoreError("Document does not exists.");
+    if(!this.exists(id)) throw new StoreError("Document does not exists.");
 
     var doc = this.getInfo(id);
     doc.commits = private.commits.call(this, id).dump();
@@ -471,16 +480,22 @@ Store.__prototype__ = function() {
     return doc;
   };
 
-  // Retrieves a range of the document's commits
+  // Retrieves a document's commits
   // --------
-  // If called without last and since, all commits are returned.
-  // If called without since the whole branch is returned.
+  // options:
+  //  last:     id of the last commit in the range
+  //  since:    id of the first commit in the range (exclusive)
+  //  commits:  an array of commit ids; (can not be combined with range query)
+  //
+  // If options is empty all commits, if only last is given the whole branch is returned.
+
 
   this.commits = function(id, options) {
     options = options || {};
 
-    if (_.isArray(options)) {
-      var commitIds = options;
+    if (options.commits) {
+      var commitIds = options.commits;
+      if (!_.isArray(commitIds)) throw new StoreErrror("Illegal argument");
       return private.getCommits.call(this, id, commitIds);
     }
 
@@ -602,7 +617,7 @@ Store.__prototype__ = function() {
 
   this.getBlob = function(docId, blobId) {
     var blobs = private.blobs.call(this, docId);
-    if (!blobs.contains(blobId)) throw new errors.StoreError("Blob not found.");
+    if (!blobs.contains(blobId)) throw new StoreError("Blob not found.");
     return blobs.get(blobId);
   };
 
@@ -647,6 +662,12 @@ Store.__prototype__ = function() {
     last = last || null;
     since = since || null;
 
+    console.log("store.getChanges", id, last, since);
+
+    if (last === since) console.log("... no change");
+    if (!changes.contains(last)) console.log("... unknown last.");
+    if (since && !changes.contains(since)) console.log("... unknown since.");
+
     if (last === since || !changes.contains(last)
       || (since && !changes.contains(since))) return result;
 
@@ -675,7 +696,6 @@ Store.__prototype__ = function() {
   this.getLastChange = function(trackId) {
     var track = private.tracks.call(this, trackId);
     var last = track.get(Store.CURRENT);
-
     return last;
   };
 
@@ -767,14 +787,14 @@ Store.AbstractHash = function() {
 
   this.get = function(key) {
     if(!this.contains(key)) {
-      //throw new errors.StoreError("Unknown key:"+key);
+      //throw new StoreError("Unknown key:"+key);
       return undefined;
     }
     return this.__get__(key);
   };
 
   this.set = function(key, value) {
-    if (!key) throw new errors.StoreError("Illegal key:"+key);
+    if (!key) throw new StoreError("Illegal key:"+key);
     var keys = _.without(this.keys(), key);
     keys.push(key);
     this.__set__("__keys__", keys);
@@ -783,7 +803,7 @@ Store.AbstractHash = function() {
 
   this.extend = function(key, obj) {
     var val = this.get(key) || {};
-    if (!_.isObject(val)) new errors.StoreError("Stored value can not be extended.");
+    if (!_.isObject(val)) new StoreError("Stored value can not be extended.");
     _.extend(val, obj);
     this.set(key, val);
   };

@@ -51,6 +51,7 @@ RedisStore.__impl__ = function(self) {
   };
 
   this.clear = function() {
+    // console.log("Clearing...");
     self.redis.removeWithPrefix("");
   };
 
