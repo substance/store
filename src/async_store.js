@@ -171,12 +171,15 @@ AsyncStore.__prototype__ = function() {
   // ========
   //
 
-  this.getChanges = function(id, start, since, cb) {
+  this.getChanges = function(id, last, since, cb) {
+
     if (arguments.length == 2) {
-      cb = start;
-      start = undefined; since = undefined;
+      cb = last;
+      last = undefined;
+      since = undefined;
     }
-    var result = this.store.getChanges(id, start, since);
+
+    var result = this.store.getChanges(id, last, since);
     cb(null, result);
   };
 

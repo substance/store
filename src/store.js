@@ -633,7 +633,7 @@ Store.__prototype__ = function() {
   // ========
   //
 
-  this.getChanges = function(id, start, since) {
+  this.getChanges = function(id, last, since) {
     var result = [];
     var changes = private.changes.call(this, id);
 
@@ -644,14 +644,14 @@ Store.__prototype__ = function() {
       return result;
     }
 
-    start = start || null;
+    last = last || null;
     since = since || null;
 
-    if (start === since || !changes.contains(start)
+    if (last === since || !changes.contains(last)
       || (since && !changes.contains(since))) return result;
 
     var change;
-    var cid = start;
+    var cid = last;
     while(true) {
       if (cid === since) break;
 
