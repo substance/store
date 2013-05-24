@@ -194,6 +194,16 @@ AsyncStore.__prototype__ = function() {
     }
   };
 
+  this.subscribe = function(docId, role, cb) {
+    console.log("AsyncStore.subscribe", docId, role);
+    try {
+      this.store.subscribe(docId, role);
+      cb(null);
+    } catch (err) {
+      cb(err);
+    }
+  };
+
 };
 AsyncStore.prototype = new AsyncStore.__prototype__();
 

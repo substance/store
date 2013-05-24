@@ -251,21 +251,36 @@ Replicator.StoreMergeStrategy = function() {
       _.each(Object.keys(all), function(docId) {
         var conflict = this.hasConflict(grouped.mine.docId, grouped.theirs.docId);
         if (conflict) conflicts[docId] = conflict;
-      });
+      }, this);
 
       if (_.isEmpty(conflicts)) {
-        // create an extra change
-        var cid = util.uuid();
+
         var myLast = _.last(changes.mine).id;
         var theirLast = _.last(changes.theirs).id;
-        var change = {id: cid, "command": ["merge", theirLast], parent: myLast};
 
         result.mine = changes.theirs.slice(0);
         result.theirs = changes.mine.slice(0);
-        result.mine.push(change);
-        result.theirs.push(change);
+
+        // Note: In contrast to git I want to have the index linear.
+        // Without introducing a concept to rewrite, this leads to different
+        // versions of the index regarding the order.
+        // For now, this divergence tolerated.
+        // TODO: allow to rewrite changes to solve this problem.
+
+        var cid = util.uuid();
+
+        // create a sequence of changes that can be applied onto mine
+        // with the last change indicates the merge and is shared on both sides afterwards
+        result.mine[0].parent = myLast;
+        var myMerge = {id: cid, "command": ["merge", myLast], parent: theirLast};
+        result.mine.push(myMerge);
+
+        // create a sequence of changes that can be applied onto theirs
+        result.theirs[0].parent = theirLast;
+        var theirMerge = {id: cid, "command": ["merge", theirLast], parent: myLast};
+        result.theirs.push(theirMerge);
+
       } else {
-        // TODO:
         throw new Error("Merging with conflicts is not implemented yet.");
       }
     }

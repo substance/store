@@ -306,6 +306,11 @@ var Store_private = function() {
     var cid = command.id;
     var last = track.get(Store.CURRENT);
 
+    if (changes.contains(cid)) {
+      console.log("Tried to reapply a change. Ignoring.");
+      return;
+    }
+
     if (last && command.parent !== last) {
       throw new Error("Command has invalid parent.");
     }
@@ -690,7 +695,19 @@ Store.__prototype__ = function() {
   this.applyCommand = function(trackId, command) {
     if (trackId === Store.MAIN_TRACK) private.applyStoreCommand.call(this, command);
     else private.applyDocumentCommand.call(this, trackId, command);
-  }
+  };
+
+  // Subscribe for another document
+  // --------
+  // Note: usually this does not have any effect. Only if the creator (or another authorized person)
+  //  has granted access via the hub.
+
+  this.subscribe = function(id, role) {
+    console.log("Subscribing for", id, "as", role);
+    if (role === "collaborator" || role === "reader") {
+      return private.recordStoreCommand.call(this, "create", id, {role: role});
+    } else throw new StoreError("Can't subscribe as "+role);
+  };
 
 };
 
