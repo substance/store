@@ -703,7 +703,7 @@ Store.__prototype__ = function() {
   //  has granted access via the hub.
 
   this.subscribe = function(id, role) {
-    console.log("Subscribing for", id, "as", role);
+    // console.log("Subscribing for", id, "as", role);
     if (role === "collaborator" || role === "reader") {
       return private.recordStoreCommand.call(this, "create", id, {role: role});
     } else throw new StoreError("Can't subscribe as "+role);

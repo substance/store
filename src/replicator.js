@@ -38,7 +38,7 @@ var Replicator_private = function() {
       localIndex = self.local.getIndex(trackId)
       self.remote.getIndex(trackId, function(err, data) {
         remoteIndex = data;
-        console.log("Replicator.syncChanges.getIndex:", "localIndex", localIndex, "remoteIndex", remoteIndex);
+        // console.log("Replicator.syncChanges.getIndex:", "localIndex", localIndex, "remoteIndex", remoteIndex);
         cb(err);
       });
     }
@@ -72,8 +72,7 @@ var Replicator_private = function() {
         else break;
       }
 
-      console.log("Replicator.syncChanges.computeDiff:", "localDiff", localDiff, "remoteDiff", remoteDiff);
-
+      // console.log("Replicator.syncChanges.computeDiff:", "localDiff", localDiff, "remoteDiff", remoteDiff);
       cb(null);
     }
 
@@ -84,15 +83,16 @@ var Replicator_private = function() {
       localChanges = self.local.getChanges(trackId, localDiff) || [];
       self.remote.getChanges(trackId, remoteDiff, function(err, data) {
         remoteChanges = data || [];
-        console.log("Changes:", trackId, ", mine:", JSON.stringify(localChanges), ", theirs:", JSON.stringify(remoteChanges));
+        // console.log("Changes:", trackId, ", mine:", JSON.stringify(localChanges), ", theirs:", JSON.stringify(remoteChanges));
         cb(err);
       });
     }
 
     function merge(cb) {
+      // 'merged' contains 'mine' and 'theirs' and represents the changes that have been selected for merge.
+      // merged.mine will be applied on the local store, and merged.theirs on the remote store.
       merged = private.merge.call(self, trackId, {mine: localChanges, theirs: remoteChanges});
-      console.log("Merged:", trackId, ", mine:", JSON.stringify(merged.mine),
-        ", theirs:", JSON.stringify(merged.theirs));
+      //console.log("Merged:", trackId, ", mine:", JSON.stringify(merged.mine), ", theirs:", JSON.stringify(merged.theirs));
       cb(null);
     };
 
