@@ -84,10 +84,11 @@ var Replicator_private = function() {
             var options = change.command[2];
             var commitIds = options.commits;
 
-            var data = {};
             self.remote.commits(docId, {commits: commitIds}, function(err, commits) {
               if (err) return cb(err);
-              data.commits = commits;
+              var data = {};
+              data.commits = commits
+              change.data = data;
               cb(null);
             });
           }
