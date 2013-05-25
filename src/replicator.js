@@ -5,6 +5,9 @@
 var root = this;
 var util = Substance.util;
 var Store = Substance.Store;
+var errors = Substance.errors;
+
+var ReplicationError = errors.define("ReplicationError", 510);
 
 var Replicator = function(params) {
 
@@ -281,7 +284,7 @@ Replicator.StoreMergeStrategy = function() {
         result.theirs.push(theirMerge);
 
       } else {
-        throw new Error("Merging with conflicts is not implemented yet.");
+        throw new ReplicationError("Merging with conflicts is not implemented yet.");
       }
     }
 
@@ -305,7 +308,7 @@ Replicator.DocumentMergeStrategy = function() {
     }
     // Non-Fast-Forward
     else {
-      throw new Error("Non fast-forward merges are not yet supported");
+      throw new ReplicationError("Non fast-forward merges are not yet supported");
     }
 
     return result;
