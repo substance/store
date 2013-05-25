@@ -40,8 +40,7 @@ MemoryStore.__impl__ = function(self) {
   };
 
   this.delete = function (id) {
-    // TODO: maybe could improve, as the actual structure is not defined here
-    delete self.content.document.id;
+    delete self.content.document[id];
   };
 
   this.clear = function() {
@@ -69,7 +68,10 @@ MemoryStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
 
   __set__ : function(key, value) {
     if (value === undefined) delete this.obj[key];
-    else this.obj[key] = value;
+    else {
+      // TODO: is there a quicker cloning mehtod?
+      this.obj[key] = JSON.parse(JSON.stringify(value));
+    }
   }
 
 });
