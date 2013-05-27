@@ -19,7 +19,7 @@ BUILD_JSC_EXTENSION=0
 BUILD_V8_EXTENSION=0
 NODE=0
 
-function readopts {
+readopts() {
   while ((OPTIND<=$#)); do
     if getopts ":d:e:hbvn" opt; then
       case $opt in
