@@ -1,29 +1,30 @@
 
-(function(){
+(function(root){ "use_strict";
 
-var root = this;
+var _,
+    util,
+    errors,
+    Store;
 
 // Native extension
 if (typeof exports !== 'undefined') {
-  var util = require('../../util/util');
-  var errors = require('../../util/errors');
-  var Store = require('./store').Store;
-  var _ = require('underscore');
+  _ = require('underscore');
+  util = require('../../util/util');
+  errors = require('../../util/errors');
+  Store = require('./store').Store;
 } else {
-  var util = root.Substance.util;
-  var errors = root.Substance.errors;
-  var Store = root.Substance.Store;
-  var _ = root._;
+  _ = root._;
+  util = root.Substance.util;
+  errors = root.Substance.errors;
+  Store = root.Substance.Store;
 }
 
 var MemoryStore = function() {
   Store.call(this);
   this.content = {};
+};
 
-  this.impl = new MemoryStore.__impl__(this);
-}
-
-MemoryStore.__impl__ = function(self) {
+MemoryStore.__prototype__ = function() {
 
   this.hash = function() {
     return this.sortedhash.apply(this, arguments);
@@ -31,7 +32,7 @@ MemoryStore.__impl__ = function(self) {
 
   this.sortedhash = function() {
     var path = arguments;
-    var obj = self.content;
+    var obj = this.content;
     _.each(path, function(scope) {
       obj[scope] = obj[scope] || {};
       obj = obj[scope];
@@ -40,16 +41,17 @@ MemoryStore.__impl__ = function(self) {
   };
 
   this.delete = function (id) {
-    delete self.content.document[id];
+    delete this.content.document[id];
   };
 
   this.clear = function() {
-    self.content = {};
+    this.content = {};
   };
 
 };
 
-MemoryStore.prototype = Store.prototype;
+MemoryStore.__prototype__.prototype = Store.prototype;
+MemoryStore.prototype = new MemoryStore.__prototype__();
 
 MemoryStore.Hash = function(obj) {
   if (!obj) throw new Error("Illegal argument.");

@@ -1,72 +1,71 @@
-(function(){
+(function(root){ "use_strict";
 
-var root = this;
+var _,
+    util,
+    errors,
+    Store;
 
 // Native extension
 if (typeof exports !== 'undefined') {
-  var util = require('../../util/util');
-  var errors = require('../../util/errors');
-  var Store = require('./store').Store;
-  var _ = require('underscore');
+  _ = require('underscore');
+  util = require('../../util/util');
+  errors = require('../../util/errors');
+  Store = require('./store').Store;
 } else {
-  var util = root.Substance.util;
-  var errors = root.Substance.errors;
-  var Store = root.Substance.Store;
-  var _ = root._;
+  _ = root._;
+  util = root.Substance.util;
+  errors = root.Substance.errors;
+  Store = root.Substance.Store;
 }
 
 var LocalStore = function(scope) {
   Store.call(this);
   this.scope = scope || "";
-
-  this.impl = new LocalStore.__impl__(this);
 };
 
-LocalStore.__impl__ = function(self) {
+LocalStore.__prototype__ = function() {
 
   function clear(prefix) {
     var keys = [];
     var idx = 0;
     var key;
-    while(key=localStorage.key(idx++)) {
+    while(true) {
+      key = localStorage.key(idx++);
+      if (!key) break;
+
       //console.log("Is prefix?", scope, key, key.indexOf(scope));
       if (key.indexOf(prefix) === 0) {
         keys.push(key);
       }
     }
+
     _.each(keys, function(key) {
       localStorage.removeItem(key);
-    })
-  };
+    });
+  }
 
   this.hash = function() {
     return this.sortedhash.apply(this, arguments);
   };
 
   this.sortedhash = function() {
-    var key = Store.defaultHashKey(arguments, self.scope);
+    var key = Store.defaultHashKey(arguments, this.scope);
     return new LocalStore.Hash(key);
   };
 
   this.delete = function (id) {
     // TODO: maybe could improve, as the actual structure is not defined here
-    clear(self.scope+":document:"+id);
+    clear(this.scope+":document:"+id);
   };
 
   this.clear = function() {
-    clear(self.scope);
+    clear(this.scope);
   };
 
-  this.log = function(id) {
-    var changes = self.getChanges(id);
-    var result = [];
-    _.each(changes, function(c){
-      console.log(JSON.stringify(c));
-    });
-  };
 };
 
-LocalStore.prototype = Store.prototype;
+LocalStore.__prototype__.prototype = Store.prototype;
+LocalStore.prototype = new LocalStore.__prototype__();
 
 LocalStore.Hash = function(scope) {
   this.scope = scope;

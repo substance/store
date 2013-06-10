@@ -1,18 +1,27 @@
 
-(function(){
+(function(root){ "use_strict";
 
-var root = this;
+var _,
+    util,
+    errors,
+    Store,
+    redis;
 
+// TODO: where does redis come from?
+
+// Native extension
 if (typeof exports !== 'undefined') {
-  var util = require('../../util/util');
-  var Store = require('./store').Store;
-  var _ = require('underscore');
-  var redis = require('../lib/redis');
+  _ = require('underscore');
+  util = require('../../util/util');
+  errors = require('../../util/errors');
+  Store = require('./store').Store;
+  redis = require('../lib/redis');
 } else {
-  var util = root.Substance.util;
-  var Store = root.Substance.Store;
-  var _ = root._;
-  var redis = root.redis;
+  _ = root._;
+  util = root.Substance.util;
+  errors = root.Substance.errors;
+  Store = root.Substance.Store;
+  redis = root.redis;
 }
 
 var RedisStore = function(settings) {
@@ -23,7 +32,7 @@ var RedisStore = function(settings) {
     port: 6379,
     scope: "substance"
   };
-  var settings = _.extend(defaults, settings);
+  settings = _.extend(defaults, settings);
 
   this.redis = redis.RedisAccess.Create(0);
   this.redis.setHost(settings.host);
@@ -35,7 +44,7 @@ var RedisStore = function(settings) {
   this.redis.connect();
 
   this.impl = new RedisStore.__impl__(this);
-}
+};
 
 RedisStore.__impl__ = function(self) {
 
@@ -65,7 +74,7 @@ RedisStore.Hash = function(redis, scope) {
   this.redis = redis;
   this.scope = scope;
   this.hash = redis.asHash(scope);
-}
+};
 
 RedisStore.Hash.__prototype__ = function() {
 
@@ -78,7 +87,7 @@ RedisStore.Hash.__prototype__ = function() {
   };
 
   this.set = function(key, value) {
-    if (!key) throw new StoreError("Illegal key:"+key);
+    if (!key) throw new errors.StoreError("Illegal key:"+key);
 
     if (value === undefined) {
       this.hash.remove(key);
