@@ -45,4 +45,4 @@ Replicator.prototype = new Replicator.__prototype__();
 
 root.Substance.Replicator = Replicator;
 
-}).call(this);
+})(this);
