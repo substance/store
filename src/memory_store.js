@@ -69,11 +69,11 @@ MemoryStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
   },
 
   __set__ : function(key, value) {
-    if (value === undefined) delete this.obj[key];
-    else {
-      // TODO: is there a quicker cloning mehtod?
-      this.obj[key] = JSON.parse(JSON.stringify(value));
-    }
+    this.obj[key] = util.deepclone(value);
+  },
+
+  __delete__ : function(key) {
+    delete this.obj[key];
   }
 
 });

@@ -99,23 +99,16 @@ Store.AbstractHash = function() {
     this.__set__(key, value);
   };
 
-  this.extend = function(key, obj) {
-    var val = this.get(key) || {};
-    if (!_.isObject(val)) new StoreError("Stored value can not be extended.");
-    _.extend(val, obj);
-    this.set(key, val);
-  };
-
   this.delete = function(key) {
     var keys = _.without(this.keys(), key);
     this.__set__("__keys__", keys);
-    this.__set__(key, undefined);
+    this.__delete__(key);
   };
 
   this.clear = function() {
     var keys = this.keys();
     _.each(keys, function(key) {
-      this.delete(key);
+      this.__delete__(key);
     }, this);
     this.__set__("__keys__", []);
   };
@@ -145,6 +138,19 @@ Store.AbstractHash = function() {
     throw new Error("Not implemented");
   };
 
+  this.__delete__ = function(key) {
+    throw new Error("Not implemented");
+  };
+
+};
+
+Store.defaultHashKey = function(args, scope) {
+  var path = [];
+  if (scope) path.push(scope);
+  for (var idx=0; idx<args.length; idx++) {
+    path.push(args[idx]);
+  }
+  return path.join(":");
 };
 
 // Exports

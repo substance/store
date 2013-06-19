@@ -89,8 +89,12 @@ LocalStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
 
   __set__ : function(key, value) {
     key = this.scoped(key);
-    if (value === undefined) localStorage.removeItem(key);
-    else localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify(value));
+  },
+
+  __delete__ : function(key) {
+    key = this.scoped(key);
+    localStorage.removeItem(key);
   }
 
 });

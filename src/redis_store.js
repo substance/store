@@ -7,7 +7,8 @@ var _,
     Store,
     redis;
 
-// TODO: where does redis come from?
+// Note: redis is inject by a native plugin
+if (typeof redis === "undefined") return;
 
 // Native extension
 if (typeof exports !== 'undefined') {
@@ -88,12 +89,7 @@ RedisStore.Hash.__prototype__ = function() {
 
   this.set = function(key, value) {
     if (!key) throw new errors.StoreError("Illegal key:"+key);
-
-    if (value === undefined) {
-      this.hash.remove(key);
-    } else {
-      this.hash.set(key, value);
-    }
+    this.hash.set(key, value);
   };
 
   this.clear = function() {
