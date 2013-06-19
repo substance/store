@@ -29,18 +29,18 @@ var PersistentIndex = function(store, index) {
   this.index = index || Chronicle.Index.create();
 
   this.store = store;
-  this.changes = store.hash(CHANGES);
-  this.refs = store.hash(REFS);
+  this.__changes__ = store.hash(CHANGES);
+  this.__refs__ = store.hash(REFS);
 
   // Initialize the index with the content loaded from the store
 
   // Trick: let the changes hash mimic an Index (duck-type)
   // and use Index.import
-  this.changes.list = this.changes.keys;
-  this.index.import(this.changes);
+  this.__changes__.list = this.__changes__.keys;
+  this.index.import(this.__changes__);
 
-  _.each(this.refs.keys(), function(ref) {
-    this.index.setRef(ref, this.refs.get(ref));
+  _.each(this.__refs__.keys(), function(ref) {
+    this.index.setRef(ref, this.__refs__.get(ref));
   }, this);
 };
 
@@ -51,17 +51,17 @@ PersistentIndex.__prototype__ = function() {
 
   this.add = function(change) {
     this.index.add(change);
-    this.changes.set(change.id, change);
+    this.__changes__.set(change.id, change);
   };
 
   this.remove = function(id) {
     this.index.remove(id);
-    this.changes.delete(id);
+    this.__changes__.delete(id);
   };
 
   this.setRef = function(name, id) {
     this.index.setRef(name, id);
-    this.refs.set(name, id);
+    this.__refs__.set(name, id);
   };
 
   // Not allowed.
@@ -92,6 +92,10 @@ PersistentIndex.__prototype__ = function() {
     return this.index.list();
   };
 
+  this.listRefs = function() {
+    return this.index.listRefs();
+  };
+
   this.diff = function(start, end) {
     return this.index.diff(start, end);
   };
@@ -103,5 +107,11 @@ PersistentIndex.__prototype__ = function() {
 };
 PersistentIndex.__prototype__.prototype = Chronicle.Index.prototype;
 PersistentIndex.prototype = new PersistentIndex.__prototype__();
+
+if (typeof exports !== 'undefined') {
+  module.exports = PersistentIndex;
+} else {
+  Chronicle.PersistentIndex = PersistentIndex;
+}
 
 })(this);
