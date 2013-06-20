@@ -10,10 +10,10 @@ var _,
 
 if (typeof exports !== 'undefined') {
   _ = require('underscore');
-  util = require('../../util/util');
-  errors = require('../../util/errors');
+  util = require('../lib/util/util');
+  errors = require('../lib/util/errors');
   Store = require('./store').Store;
-  Chronicle = require('../../chronicle/chronicle');
+  Chronicle = require('../lib/chronicle/chronicle');
 } else {
   _ = root._;
   util = root.Substance.util;

@@ -4,3 +4,7 @@
 node_modules
 
 /npm-debug.log
+
+/lib/chronicle
+/lib/util
+/lib/data
