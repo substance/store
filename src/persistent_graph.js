@@ -21,12 +21,12 @@ if (typeof exports !== 'undefined') {
 }
 
 var PersistentGraph = function(store, graph) {
-  Data.Graph.call(this);
+  this.graph = graph;
   this.__nodes__ = store.hash("nodes");
-  if(graph) this.merge(graph);
 };
 
 PersistentGraph.__prototype__ = function() {
+
   var __super__ = util.prototype(this);
 
   // delegate all methods to graph
@@ -47,12 +47,12 @@ PersistentGraph.__prototype__ = function() {
   };
 
   this.delete = function(id) {
-    this.removeFromIndex(this.get(id));
+    this.graph.delete(id);
     this.store.delete(id);
   };
 
   this.reset = function() {
-    __super__.reset.call(this);
+    this.graph.reset();
     if (this.store) this.store.clear();
   };
 
