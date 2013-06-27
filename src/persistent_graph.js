@@ -43,18 +43,12 @@ PersistentGraph.__prototype__ = function() {
 
   this.get = function(path) {
     if (_.isString(path)) return this.__nodes__.get(path);
-
-    var prop = this.resolve(path);
-    return prop.get();
+    else return __super__.get.call(this, path);
   };
 
   this.delete = function(id) {
     this.removeFromIndex(this.get(id));
     this.store.delete(id);
-  };
-
-  this.resolve = function(path) {
-    return new PersistentGraph.Property(this, path);
   };
 
   this.reset = function() {
@@ -66,28 +60,10 @@ PersistentGraph.__prototype__ = function() {
 PersistentGraph.__prototype__.prototype = Data.Graph.prototype;
 PersistentGraph.prototype = new PersistentGraph.__prototype__();
 
-
-PersistentGraph.Property = function(graph, path, nodes) {
-  Data.Property.call(this, graph, path);
-  this.graph = graph;
-};
-
-PersistentGraph.Property.__prototype__ = function() {
-  var __super__ = util.prototype(this);
-
-  this.set = function(value) {
-    __super__.set.call(this, value);
-    this.graph.set(this.node.id, this.node);
-  };
-
-};
-PersistentGraph.Property.__prototype__.prototype = Data.Property.prototype;
-PersistentGraph.Property.prototype = new PersistentGraph.Property.__prototype__();
-
 if (typeof exports !== 'undefined') {
   module.exports = PersistentGraph;
 } else {
-  Substance.Data.PersistentGraph = PersistentGraph;
+  root.Substance.Data.PersistentGraph = PersistentGraph;
 }
 
 })(this);
