@@ -53,13 +53,12 @@ LocalStore.__prototype__ = function() {
     return new LocalStore.Hash(key);
   };
 
-  this.delete = function (id) {
-    // TODO: maybe could improve, as the actual structure is not defined here
-    clear(this.scope+":document:"+id);
-  };
-
   this.clear = function() {
     clear(this.scope);
+  };
+
+  this.subStore = function(path) {
+    return new LocalStore(this.scope + ":" + path.join(":"));
   };
 
 };

@@ -33,15 +33,15 @@ var RedisStore = function(settings) {
     port: 6379,
     scope: "substance"
   };
-  settings = _.extend(defaults, settings);
+  this.settings = _.extend(defaults, settings);
 
   this.redis = redis.RedisAccess.Create(0);
-  this.redis.setHost(settings.host);
-  this.redis.setPort(settings.port);
+  this.redis.setHost(this.settings.host);
+  this.redis.setPort(this.settings.port);
 
   // the scope is useful to keep parts of the redis db separated
   // e.g. tests would use its own, or one could separate user spaces
-  this.redis.setScope(settings.scope);
+  this.redis.setScope(this.settings.scope);
   this.redis.connect();
 
   this.impl = new RedisStore.__impl__(this);
@@ -59,13 +59,14 @@ RedisStore.__impl__ = function(self) {
     return new RedisStore.SortedHash(self.redis, key);
   };
 
-  this.delete = function (id) {
-    self.redis.removeWithPrefix("document:"+id);
+  this.clear = function() {
+    self.redis.removeWithPrefix("");
   };
 
-  this.clear = function() {
-    // console.log("Clearing...");
-    self.redis.removeWithPrefix("");
+  this.subStore = function(path) {
+    var settings = _.clone(this.settings);
+    settings.scope = settings.scope + ":" + path.join(":");
+    return new RedisStore(settings);
   };
 
 };

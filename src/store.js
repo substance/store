@@ -39,17 +39,16 @@ Store.__prototype__ = function() {
     throw "Called abstract method.";
   };
 
-  // Removes all data of a document
-  // --------
-  //
-  this.delete = function (docId) {
-    throw "Called abstract method.";
-  };
-
   // Clears the whole store
   // --------
   //
   this.clear = function() {
+    throw "Called abstract method.";
+  };
+
+  // Create a store instance that is phyisically living in a sub-scope of
+  // this store
+  this.subStore = function(path) {
     throw "Called abstract method.";
   };
 

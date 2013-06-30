@@ -19,33 +19,37 @@ if (typeof exports !== 'undefined') {
   Store = root.Substance.Store;
 }
 
-var MemoryStore = function() {
+var MemoryStore = function(content) {
   Store.call(this);
-  this.content = {};
+  this.content = content || {};
 };
 
 MemoryStore.__prototype__ = function() {
+
+  function resolve(obj, path) {
+    _.each(path, function(scope) {
+      obj[scope] = obj[scope] || {};
+      obj = obj[scope];
+    });
+    return obj;
+  }
 
   this.hash = function() {
     return this.sortedhash.apply(this, arguments);
   };
 
   this.sortedhash = function() {
-    var path = arguments;
-    var obj = this.content;
-    _.each(path, function(scope) {
-      obj[scope] = obj[scope] || {};
-      obj = obj[scope];
-    });
+    var obj = resolve(this.content, arguments);
     return new MemoryStore.Hash(obj);
-  };
-
-  this.delete = function (id) {
-    delete this.content.document[id];
   };
 
   this.clear = function() {
     this.content = {};
+  };
+
+  this.subStore = function(path) {
+    var obj = resolve(this.content, path);
+    return new MemoryStore(obj);
   };
 
 };
