@@ -91,7 +91,9 @@ Store.AbstractHash = function() {
   };
 
   this.set = function(key, value) {
-    if (!key) throw new StoreError("Illegal key:"+key);
+    if (!key) {
+      throw new StoreError("Illegal key:"+key);
+    }
     var keys = _.without(this.keys(), key);
     keys.push(key);
     this.__set__("__keys__", keys);
