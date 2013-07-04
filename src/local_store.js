@@ -8,9 +8,9 @@ var _,
 // Native extension
 if (typeof exports !== 'undefined') {
   _ = require('underscore');
-  util = require('../../util/util');
-  errors = require('../../util/errors');
-  Store = require('./store').Store;
+  util = require('substance-util');
+  errors = require('substance-util/errors');
+  Store = require('./store');
 } else {
   _ = root._;
   util = root.Substance.util;

@@ -8,15 +8,16 @@ var _,
     redis;
 
 // Note: redis is inject by a native plugin
-if (typeof redis === "undefined") return;
+// if (typeof redis === "undefined") return;
 
 // Native extension
 if (typeof exports !== 'undefined') {
   _ = require('underscore');
-  util = require('../../util/util');
-  errors = require('../../util/errors');
-  Store = require('./store').Store;
+  util = require('substance-util');
+  errors = require('substance-util/errors');
+  Store = require('./store');
   redis = require('../lib/redis');
+  console.log()
 } else {
   _ = root._;
   util = root.Substance.util;
@@ -144,9 +145,8 @@ RedisStore.SortedHash.prototype = new RedisStore.SortedHash.__prototype__();
 
 // Exports
 if (typeof exports !== 'undefined') {
-  exports.RedisStore = RedisStore;
+  module.exports = RedisStore;
 } else {
-  root.RedisStore = RedisStore;
   root.Substance.RedisStore = RedisStore;
 }
 

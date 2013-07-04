@@ -17,7 +17,6 @@
   "scripts": {
     "preinstall" : "./update.sh -d $HOME/tmp/substance -n && node-gyp configure build"
   },
-  "main": "./src/redis_store.js",
   "directories": {
       "lib": "./lib"
   }

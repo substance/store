@@ -9,9 +9,9 @@ var _,
 // Native extension
 if (typeof exports !== 'undefined') {
   _ = require('underscore');
-  util = require('../../util/util');
-  errors = require('../../util/errors');
-  Store = require('./store').Store;
+  util = require('substance-util');
+  errors = require('substance-util/errors');
+  Store = require('./store');
 } else {
   _ = root._;
   util = root.Substance.util;
@@ -84,7 +84,7 @@ MemoryStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
 
 // Exports
 if (typeof exports !== 'undefined') {
-  exports.MemoryStore = MemoryStore;
+  module.exports = MemoryStore;
 } else {
   root.Substance.MemoryStore = MemoryStore;
 }

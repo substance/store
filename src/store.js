@@ -6,8 +6,8 @@ var _,
 
 if (typeof exports !== 'undefined') {
   _ = require('underscore');
-  util = require('../../util/util');
-  errors = require('../../util/errors');
+  util = require('substance-util');
+  errors = require('substance-util/errors');
 } else {
   _ = root._;
   util = root.Substance.util;
@@ -156,7 +156,7 @@ Store.defaultHashKey = function(args, scope) {
 
 // Exports
 if (typeof exports !== 'undefined') {
-  exports.Store = Store;
+  module.exports = Store;
 } else {
   root.Substance.Store = Store;
 }
