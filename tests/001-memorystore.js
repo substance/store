@@ -1,5 +1,7 @@
 (function(root) {
 
+
+
 var Substance = root.Substance;
 
 var impl = {

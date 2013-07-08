@@ -4,7 +4,6 @@ var Substance = root.Substance;
 
 var impl = {
   setup: function() {
-    this.store = new Substance.MemoryStore();
   }
 };
 

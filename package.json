@@ -1,23 +1,20 @@
 {
   "name": "substance-store",
   "description": "Provides access to a Substance Document Store.",
-  "keywords": ["redis", "redisdb", "substance"],
-  "author": "Oliver Buchtala <oliver.buchtala@gmail.com>",
+  "keywords": ["substance", "store"],
+  "author": "Oliver Buchtala",
+  "contributors": ["Michael Aufreiter"],
   "version": "0.1.0",
   "repository": {
-      "type": "git",
-      "url": "https://github.com/substance/store.git"
+    "type": "git",
+    "url": "https://github.com/substance/store.git"
   },
   "engines": {
-      "node": ">=0.6.0"
+      "node": "0.8.x"
   },
   "dependencies": {
-    "underscore": "1.4.x"
-  },
-  "scripts": {
-    "preinstall" : "./update.sh -d $HOME/tmp/substance -n && node-gyp configure build"
-  },
-  "directories": {
-      "lib": "./lib"
+    "underscore": "1.5.x",
+    "substance-util": "0.1.0",
+    "substance-test": "0.1.0"
   }
 }
