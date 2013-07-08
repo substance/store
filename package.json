@@ -16,5 +16,8 @@
     "underscore": "1.5.x",
     "substance-util": "0.1.0",
     "substance-test": "0.1.0"
+  },
+  "scripts": {
+    "preinstall" : "./update.sh -d $HOME/tmp/substance -n && node-gyp configure build"
   }
 }
