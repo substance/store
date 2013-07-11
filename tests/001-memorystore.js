@@ -1,16 +1,17 @@
 (function(root) {
 
-
-
 var Substance = root.Substance;
 
-var impl = {
+if (!Substance.MemoryStore) return;
+
+var test = {
   setup: function() {
     this.store = new Substance.MemoryStore();
-  }
+    this.store.clear();
+  },
+  actions: []
 };
 
-var test = new root.Substance.test.StoreTest(impl);
-root.Substance.registerTest(["Store", "MemoryStore"], test);
+root.Substance.Test.registerTest(["Store", "MemoryStore"], test);
 
 })(this);
