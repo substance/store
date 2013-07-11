@@ -1,4 +1,5 @@
 [
+  "store-test.js",
   "001-memorystore.js",
   "002-localstore.js"
 ]
