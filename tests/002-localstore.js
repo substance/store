@@ -12,6 +12,6 @@ var impl = {
 };
 
 var test = new root.Substance.test.StoreTest(impl);
-root.Substance.registerTest(["Store", "LocalStore"], test);
+root.Substance.Test.registerTest(["Store", "LocalStore"], test);
 
 })(this);
