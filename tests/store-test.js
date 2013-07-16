@@ -43,7 +43,6 @@ function StoreTest(impl) {
   ];
 }
 
-if (!root.Substance.test) root.Substance.test = {};
-root.Substance.test.StoreTest = StoreTest;
+root.Substance.Test.StoreTest = StoreTest;
 
 })(this);

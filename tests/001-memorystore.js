@@ -10,7 +10,7 @@ var impl = {
   }
 };
 
-var test = new root.Substance.test.StoreTest(impl);
+var test = new root.Substance.Test.StoreTest(impl);
 root.Substance.Test.registerTest(["Store", "MemoryStore"], test);
 
 })(this);
