@@ -1,5 +1,5 @@
 
-(function(root){ "use_strict";
+(function(root){ "use strict";
 
 var _,
     util,
