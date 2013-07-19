@@ -2,8 +2,8 @@
 
 var LocalStore = require("..").LocalStore;
 
-var test = require('substance-test');
-var registerTest = test.Test.registerTest;
+var Test = require('substance-test');
+var registerTest = Test.registerTest;
 var StoreTest = require("./store_test");
 
 var impl = {

@@ -1,8 +1,8 @@
 "use strict";
 
 var _ = require("underscore");
-var test = require("substance-test");
-var assert = test.assert;
+var Test = require("substance-test");
+var assert = Test.assert;
 
 function StoreTest(impl) {
   _.extend(this, impl);
