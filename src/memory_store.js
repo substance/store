@@ -1,23 +1,15 @@
+"use strict";
 
-(function(root){ "use strict";
+// Import
+// ========
 
-var _,
-    util,
-    errors,
-    Store;
+var _ = require('underscore');
+var util = require('substance-util');
+var errors = util.errors;
+var Store = require('./store');
 
-// Native extension
-if (typeof exports !== 'undefined') {
-  _ = require('underscore');
-  util = require('substance-util');
-  errors = require('substance-util/errors');
-  Store = require('./store');
-} else {
-  _ = root._;
-  util = root.Substance.util;
-  errors = root.Substance.errors;
-  Store = root.Substance.Store;
-}
+// Module
+// ========
 
 var MemoryStore = function(content) {
   Store.call(this);
@@ -82,11 +74,7 @@ MemoryStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
 
 });
 
-// Exports
-if (typeof exports !== 'undefined') {
-  module.exports = MemoryStore;
-} else {
-  root.Substance.MemoryStore = MemoryStore;
-}
+// Export
+// ========
 
-})(this);
+module.exports = MemoryStore;

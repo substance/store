@@ -1,7 +1,8 @@
-(function(root) {
+"use strict";
 
-var assert = root.Substance.assert;
-var _ = root._;
+var _ = require("underscore");
+var test = require("substance-test");
+var assert = test.assert;
 
 function StoreTest(impl) {
   _.extend(this, impl);
@@ -43,6 +44,4 @@ function StoreTest(impl) {
   ];
 }
 
-root.Substance.Test.StoreTest = StoreTest;
-
-})(this);
+module.exports = StoreTest;

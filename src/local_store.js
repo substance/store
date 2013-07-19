@@ -1,22 +1,22 @@
-(function(root){ "use strict";
+"use strict";
 
-var _,
-    util,
-    errors,
-    Store;
-
-// Native extension
-if (typeof exports !== 'undefined') {
-  _ = require('underscore');
-  util = require('substance-util');
-  errors = require('substance-util/errors');
-  Store = require('./store');
-} else {
-  _ = root._;
-  util = root.Substance.util;
-  errors = root.Substance.errors;
-  Store = root.Substance.Store;
+if (global.localStorage === undefined) {
+  module.exports = undefined;
+  return;
 }
+
+
+// Import
+// ========
+
+var _ = require('underscore');
+var util = require('substance-util');
+var errors = util.errors;
+var Store = require('./store');
+
+
+// Module
+// ========
 
 var LocalStore = function(scope) {
   Store.call(this);
@@ -98,9 +98,8 @@ LocalStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
 
 });
 
-// only add this when localStorage is available
-if (root.localStorage) {
-  root.Substance.LocalStore = LocalStore;
-}
+// Export
+// ========
 
-})(this);
+module.exports = LocalStore;
+

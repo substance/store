@@ -1,18 +1,14 @@
-(function(root){ "use strict";
+"use strict";
 
-var _,
-    util,
-    errors;
+// Import
+// ========
 
-if (typeof exports !== 'undefined') {
-  _ = require('underscore');
-  util = require('substance-util');
-  errors = require('substance-util/errors');
-} else {
-  _ = root._;
-  util = root.Substance.util;
-  errors = root.Substance.errors;
-}
+var _ = require('underscore');
+var util = require('substance-util');
+var errors = util.errors;
+
+// Module
+// ========
 
 var StoreError = errors.define('StoreError', -1);
 
@@ -154,11 +150,9 @@ Store.defaultHashKey = function(args, scope) {
   return path.join(":");
 };
 
-// Exports
-if (typeof exports !== 'undefined') {
-  module.exports = Store;
-} else {
-  root.Substance.Store = Store;
-}
 
-})(this);
+// Export
+// ========
+
+module.exports = Store;
+

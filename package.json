@@ -16,5 +16,8 @@
     "underscore": "1.5.x",
     "substance-util": "0.2.0",
     "substance-test": "0.2.0"
+  },
+  "scripts": {
+    "test": "mocha -R spec tests/run.js"
   }
 }
