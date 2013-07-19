@@ -1,7 +1,7 @@
 "use strict";
 
-module.exports = {
-  Store: require('./src/store'),
-  LocalStore: require('./src/local_store'),
-  MemoryStore: require('./src/memory_store'),
-};
+var Store = require('./src/store');
+Store.LocalStore = require('./src/local_store');
+Store.MemoryStore = require('./src/memory_store');
+
+module.exports = Store;
