@@ -1,11 +1,5 @@
 "use strict";
 
-if (global.localStorage === undefined) {
-  module.exports = undefined;
-  return;
-}
-
-
 // Import
 // ========
 
@@ -102,4 +96,3 @@ LocalStore.Hash.prototype = _.extend(new Store.AbstractHash(), {
 // ========
 
 module.exports = LocalStore;
-

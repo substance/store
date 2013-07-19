@@ -1,7 +1,6 @@
 "use strict";
 
 var LocalStore = require("..").LocalStore;
-if (!LocalStore) return;
 
 var test = require('substance-test');
 var registerTest = test.Test.registerTest;
@@ -15,4 +14,6 @@ var impl = {
   actions: []
 };
 
-registerTest(["Store", "LocalStore"], new StoreTest(impl));
+if (global.localStorage) {
+  registerTest(["Store", "LocalStore"], new StoreTest(impl));
+}
