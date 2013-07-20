@@ -4,7 +4,7 @@
   "keywords": ["substance", "store"],
   "author": "Oliver Buchtala",
   "contributors": ["Michael Aufreiter"],
-  "version": "0.2.0",
+  "version": "0.2.0-alpha",
   "repository": {
     "type": "git",
     "url": "https://github.com/substance/store.git"
@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "underscore": "1.5.x",
-    "substance-util": "0.2.0",
-    "substance-test": "0.2.0"
+    "substance-util": "0.2.0-alpha",
+    "substance-test": "0.2.0-alpha"
   },
   "scripts": {
     "test": "mocha -R spec tests/run.js"
