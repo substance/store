@@ -1,13 +1,13 @@
 "use strict";
 
-var store = require("..");
+var Store = require("../index");
 var Test = require('substance-test');
 var registerTest = Test.registerTest;
 var StoreTest = require("./store_test");
 
 var impl = {
   setup: function() {
-    this.store = new store.MemoryStore();
+    this.store = new Store.MemoryStore();
   }
 };
 
