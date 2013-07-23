@@ -14,8 +14,6 @@ var impl = {
   actions: []
 };
 
-console.log("###############", global);
-
 if (global.localStorage) {
   registerTest(["Store", "LocalStore"], new StoreTest(impl));
 }
