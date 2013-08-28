@@ -16,7 +16,7 @@ var MemoryStore = function(content) {
   this.content = content || {};
 };
 
-MemoryStore.__prototype__ = function() {
+MemoryStore.Prototype = function() {
 
   function resolve(obj, path) {
     _.each(path, function(scope) {
@@ -46,8 +46,8 @@ MemoryStore.__prototype__ = function() {
 
 };
 
-MemoryStore.__prototype__.prototype = Store.prototype;
-MemoryStore.prototype = new MemoryStore.__prototype__();
+MemoryStore.Prototype.prototype = Store.prototype;
+MemoryStore.prototype = new MemoryStore.Prototype();
 
 MemoryStore.Hash = function(obj) {
   if (!obj) throw new Error("Illegal argument.");

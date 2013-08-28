@@ -15,16 +15,16 @@
   },
   "dependencies": {
     "underscore": "1.5.x",
-    "substance-util": "git+https://github.com/substance/util.git#master"
+    "substance-util": "git+https://github.com/substance/util.git#0.2.x"
   },
   "devDependencies": {
     "mocha": "1.12.x",
-    "substance-test": "git+https://github.com/substance/test.git#master"
+    "substance-test": "git+https://github.com/substance/test.git#0.2.x"
   },
   "scripts": {
     "test": "mocha -R spec tests/run.js"
   },
-  "version": "0.2.0",
+  "version": "0.1.1",
   "engines": {
     "node": ">=0.8.x",
     "npm": ">=1.1.x"
