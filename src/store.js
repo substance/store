@@ -18,7 +18,7 @@ var Store = function() {};
 // ========
 //
 
-Store.__prototype__ = function() {
+Store.Prototype = function() {
 
   // as this is abstract disable warnings about unused variables*/
   /*jshint unused:false*/
@@ -50,7 +50,7 @@ Store.__prototype__ = function() {
 
 };
 
-Store.prototype = new Store.__prototype__();
+Store.prototype = new Store.Prototype();
 
 // A helper class to adapt a javascript object to a unified hash interface
 // used by the store.
