@@ -17,7 +17,7 @@ var LocalStore = function(scope) {
   this.scope = scope || "";
 };
 
-LocalStore.__prototype__ = function() {
+LocalStore.Prototype = function() {
 
   function clear(prefix) {
     var keys = [];
@@ -57,8 +57,8 @@ LocalStore.__prototype__ = function() {
 
 };
 
-LocalStore.__prototype__.prototype = Store.prototype;
-LocalStore.prototype = new LocalStore.__prototype__();
+LocalStore.Prototype.prototype = Store.prototype;
+LocalStore.prototype = new LocalStore.Prototype();
 
 LocalStore.Hash = function(scope) {
   this.scope = scope;
