@@ -11,4 +11,4 @@ var impl = {
   }
 };
 
-registerTest(["Store", "MemoryStore"], new StoreTest(impl));
+registerTest(["Substance.Store", "MemoryStore"], new StoreTest(impl));

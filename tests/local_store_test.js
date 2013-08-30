@@ -15,5 +15,5 @@ var impl = {
 };
 
 if (global.localStorage) {
-  registerTest(["Store", "LocalStore"], new StoreTest(impl));
+  registerTest(["Substance.Store", "LocalStore"], new StoreTest(impl));
 }
