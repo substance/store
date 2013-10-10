@@ -1,12 +1,12 @@
 {
   "name": "substance-store",
-  "description": "Provides access to a Substance Document Store.",
+  "description": "Storages for Substance Documents.",
   "keywords": ["substance", "store"],
   "author": "Oliver Buchtala",
   "contributors": ["Michael Aufreiter"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/substance/store.git"
+    "url": "https://github.com/substance/store"
   },
   "dependencies": {
     "underscore": "",
@@ -19,5 +19,5 @@
   "scripts": {
     "test": "mocha -R spec tests/run.js"
   },
-  "version": "0.1.1"
+  "version": "0.1.0"
 }
